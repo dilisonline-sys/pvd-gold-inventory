@@ -10,6 +10,8 @@ export interface JewelryItem {
   supplier: string;
   dateAdded: string;
   status: "In Stock" | "Sold" | "On Display" | "Reserved";
+  imageUrl?: string;
+  customFields?: Record<string, string>;
 }
 
 export const mockInventory: JewelryItem[] = [
@@ -25,6 +27,7 @@ export const mockInventory: JewelryItem[] = [
     supplier: "Milano Gold",
     dateAdded: "2026-03-15",
     status: "In Stock",
+    imageUrl: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=100&h=100&fit=crop",
   },
   {
     id: "PVD-002",
@@ -38,6 +41,7 @@ export const mockInventory: JewelryItem[] = [
     supplier: "Royal Gems",
     dateAdded: "2026-03-20",
     status: "On Display",
+    imageUrl: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&h=100&fit=crop",
   },
   {
     id: "PVD-003",
@@ -51,6 +55,7 @@ export const mockInventory: JewelryItem[] = [
     supplier: "Heritage Craft",
     dateAdded: "2026-04-01",
     status: "In Stock",
+    imageUrl: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=100&h=100&fit=crop",
   },
   {
     id: "PVD-004",
@@ -64,6 +69,7 @@ export const mockInventory: JewelryItem[] = [
     supplier: "Milano Gold",
     dateAdded: "2026-04-05",
     status: "Reserved",
+    imageUrl: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?w=100&h=100&fit=crop",
   },
   {
     id: "PVD-005",
@@ -77,6 +83,7 @@ export const mockInventory: JewelryItem[] = [
     supplier: "Royal Gems",
     dateAdded: "2026-04-08",
     status: "In Stock",
+    imageUrl: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=100&h=100&fit=crop",
   },
   {
     id: "PVD-006",
