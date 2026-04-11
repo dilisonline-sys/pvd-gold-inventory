@@ -4,8 +4,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Package, DollarSign, Weight, Layers } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Search, Package, DollarSign, Weight, Layers, ImageOff } from "lucide-react";
 import { mockInventory, categories, type JewelryItem } from "@/lib/mockData";
+import { useCustomColumns } from "@/lib/customColumns";
 
 const statusColor: Record<JewelryItem["status"], string> = {
   "In Stock": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -17,6 +19,8 @@ const statusColor: Record<JewelryItem["status"], string> = {
 const InventoryView = () => {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
+  const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const customColumns = useCustomColumns();
 
   const filtered = mockInventory.filter((item) => {
     const matchesSearch =
@@ -83,6 +87,16 @@ const InventoryView = () => {
         </Select>
       </div>
 
+      {/* Lightbox */}
+      <Dialog open={!!lightboxImg} onOpenChange={() => setLightboxImg(null)}>
+        <DialogContent className="max-w-lg p-2">
+          <DialogTitle className="sr-only">Image Preview</DialogTitle>
+          {lightboxImg && (
+            <img src={lightboxImg} alt="Jewelry item" className="w-full rounded-md object-contain max-h-[70vh]" />
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Table */}
       <Card>
         <CardHeader className="pb-0">
@@ -96,6 +110,7 @@ const InventoryView = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-16">Image</TableHead>
                   <TableHead className="w-24">ID</TableHead>
                   <TableHead>Item</TableHead>
                   <TableHead>Category</TableHead>
@@ -105,18 +120,36 @@ const InventoryView = () => {
                   <TableHead className="text-right">Price</TableHead>
                   <TableHead>Supplier</TableHead>
                   <TableHead>Status</TableHead>
+                  {customColumns.map((col) => (
+                    <TableHead key={col.id}>{col.name}</TableHead>
+                  ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10 + customColumns.length} className="text-center text-muted-foreground py-8">
                       No items found
                     </TableCell>
                   </TableRow>
                 ) : (
                   filtered.map((item) => (
                     <TableRow key={item.id}>
+                      <TableCell>
+                        {item.imageUrl ? (
+                          <button onClick={() => setLightboxImg(item.imageUrl!)} className="block">
+                            <img
+                              src={item.imageUrl}
+                              alt={item.itemName}
+                              className="h-10 w-10 rounded object-cover border border-border hover:ring-2 hover:ring-primary/50 transition-all cursor-pointer"
+                            />
+                          </button>
+                        ) : (
+                          <div className="h-10 w-10 rounded bg-muted flex items-center justify-center">
+                            <ImageOff className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
                       <TableCell className="font-medium">{item.itemName}</TableCell>
                       <TableCell>{item.category}</TableCell>
@@ -130,6 +163,11 @@ const InventoryView = () => {
                           {item.status}
                         </Badge>
                       </TableCell>
+                      {customColumns.map((col) => (
+                        <TableCell key={col.id} className="text-muted-foreground text-sm">
+                          {item.customFields?.[col.id] || "—"}
+                        </TableCell>
+                      ))}
                     </TableRow>
                   ))
                 )}
