@@ -1,0 +1,98 @@
+export interface JewelryItem {
+  id: string;
+  itemName: string;
+  category: string;
+  karat: number;
+  weightGrams: number;
+  quantity: number;
+  costPrice: number;
+  sellingPrice: number;
+  supplier: string;
+  dateAdded: string;
+  status: "In Stock" | "Sold" | "On Display" | "Reserved";
+}
+
+export const mockInventory: JewelryItem[] = [
+  {
+    id: "PVD-001",
+    itemName: "Cuban Link Chain 22\"",
+    category: "Chains",
+    karat: 18,
+    weightGrams: 45.2,
+    quantity: 3,
+    costPrice: 2800,
+    sellingPrice: 4200,
+    supplier: "Milano Gold",
+    dateAdded: "2026-03-15",
+    status: "In Stock",
+  },
+  {
+    id: "PVD-002",
+    itemName: "Diamond Tennis Bracelet",
+    category: "Bracelets",
+    karat: 14,
+    weightGrams: 12.8,
+    quantity: 2,
+    costPrice: 1500,
+    sellingPrice: 2800,
+    supplier: "Royal Gems",
+    dateAdded: "2026-03-20",
+    status: "On Display",
+  },
+  {
+    id: "PVD-003",
+    itemName: "Signet Ring - Eagle",
+    category: "Rings",
+    karat: 24,
+    weightGrams: 8.5,
+    quantity: 5,
+    costPrice: 950,
+    sellingPrice: 1600,
+    supplier: "Heritage Craft",
+    dateAdded: "2026-04-01",
+    status: "In Stock",
+  },
+  {
+    id: "PVD-004",
+    itemName: "Rope Chain 24\"",
+    category: "Chains",
+    karat: 22,
+    weightGrams: 38.0,
+    quantity: 1,
+    costPrice: 3200,
+    sellingPrice: 4800,
+    supplier: "Milano Gold",
+    dateAdded: "2026-04-05",
+    status: "Reserved",
+  },
+  {
+    id: "PVD-005",
+    itemName: "Hoop Earrings - Large",
+    category: "Earrings",
+    karat: 18,
+    weightGrams: 6.2,
+    quantity: 8,
+    costPrice: 420,
+    sellingPrice: 750,
+    supplier: "Royal Gems",
+    dateAdded: "2026-04-08",
+    status: "In Stock",
+  },
+  {
+    id: "PVD-006",
+    itemName: "Pendant - Lion Head",
+    category: "Pendants",
+    karat: 14,
+    weightGrams: 15.3,
+    quantity: 0,
+    costPrice: 1100,
+    sellingPrice: 1900,
+    supplier: "Heritage Craft",
+    dateAdded: "2026-02-10",
+    status: "Sold",
+  },
+];
+
+export const categories = ["Chains", "Bracelets", "Rings", "Earrings", "Pendants", "Necklaces", "Bangles"];
+export const karatOptions = [10, 14, 18, 22, 24];
+export const statusOptions: JewelryItem["status"][] = ["In Stock", "Sold", "On Display", "Reserved"];
