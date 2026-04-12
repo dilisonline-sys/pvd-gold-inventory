@@ -5,9 +5,6 @@ export interface JewelryItem {
   karat: number;
   weightGrams: number;
   quantity: number;
-  costPrice: number;
-  sellingPrice: number;
-  supplier: string;
   dateAdded: string;
   status: "In Stock" | "Sold" | "On Display" | "Reserved";
   imageUrl?: string;
@@ -22,9 +19,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 18,
     weightGrams: 45.2,
     quantity: 3,
-    costPrice: 2800,
-    sellingPrice: 4200,
-    supplier: "Milano Gold",
     dateAdded: "2026-03-15",
     status: "In Stock",
     imageUrl: "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=100&h=100&fit=crop",
@@ -36,9 +30,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 14,
     weightGrams: 12.8,
     quantity: 2,
-    costPrice: 1500,
-    sellingPrice: 2800,
-    supplier: "Royal Gems",
     dateAdded: "2026-03-20",
     status: "On Display",
     imageUrl: "https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=100&h=100&fit=crop",
@@ -50,9 +41,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 24,
     weightGrams: 8.5,
     quantity: 5,
-    costPrice: 950,
-    sellingPrice: 1600,
-    supplier: "Heritage Craft",
     dateAdded: "2026-04-01",
     status: "In Stock",
     imageUrl: "https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=100&h=100&fit=crop",
@@ -64,9 +52,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 22,
     weightGrams: 38.0,
     quantity: 1,
-    costPrice: 3200,
-    sellingPrice: 4800,
-    supplier: "Milano Gold",
     dateAdded: "2026-04-05",
     status: "Reserved",
     imageUrl: "https://images.unsplash.com/photo-1599643477877-530eb83abc8e?w=100&h=100&fit=crop",
@@ -78,9 +63,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 18,
     weightGrams: 6.2,
     quantity: 8,
-    costPrice: 420,
-    sellingPrice: 750,
-    supplier: "Royal Gems",
     dateAdded: "2026-04-08",
     status: "In Stock",
     imageUrl: "https://images.unsplash.com/photo-1630019852942-f89202989a59?w=100&h=100&fit=crop",
@@ -92,9 +74,6 @@ export const mockInventory: JewelryItem[] = [
     karat: 14,
     weightGrams: 15.3,
     quantity: 0,
-    costPrice: 1100,
-    sellingPrice: 1900,
-    supplier: "Heritage Craft",
     dateAdded: "2026-02-10",
     status: "Sold",
   },

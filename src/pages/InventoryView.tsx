@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Search, Package, DollarSign, Weight, Layers, ImageOff } from "lucide-react";
+import { Search, Package, Weight, Layers, ImageOff } from "lucide-react";
 import { mockInventory, categories, type JewelryItem } from "@/lib/mockData";
 import { useCustomColumns } from "@/lib/customColumns";
 
@@ -25,15 +25,14 @@ const InventoryView = () => {
   const filtered = mockInventory.filter((item) => {
     const matchesSearch =
       item.itemName.toLowerCase().includes(search.toLowerCase()) ||
-      item.id.toLowerCase().includes(search.toLowerCase()) ||
-      item.supplier.toLowerCase().includes(search.toLowerCase());
+      item.id.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = filterCategory === "all" || item.category === filterCategory;
     return matchesSearch && matchesCategory;
   });
 
   const totalItems = filtered.reduce((sum, i) => sum + i.quantity, 0);
   const totalWeight = filtered.reduce((sum, i) => sum + i.weightGrams * i.quantity, 0);
-  const totalValue = filtered.reduce((sum, i) => sum + i.sellingPrice * i.quantity, 0);
+  
 
   return (
     <div className="space-y-6">
@@ -43,11 +42,10 @@ const InventoryView = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { label: "Total Items", value: totalItems, icon: Layers },
           { label: "Total Weight", value: `${totalWeight.toFixed(1)}g`, icon: Weight },
-          { label: "Total Value", value: `$${totalValue.toLocaleString()}`, icon: DollarSign },
         ].map((stat) => (
           <Card key={stat.label} className="gold-glow">
             <CardContent className="flex items-center gap-4 py-4">
@@ -68,7 +66,7 @@ const InventoryView = () => {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by name, ID, or supplier..."
+            placeholder="Search by name or ID..."
             className="pl-9"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -117,8 +115,6 @@ const InventoryView = () => {
                   <TableHead className="text-right">Karat</TableHead>
                   <TableHead className="text-right">Weight</TableHead>
                   <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
-                  <TableHead>Supplier</TableHead>
                   <TableHead>Status</TableHead>
                   {customColumns.map((col) => (
                     <TableHead key={col.id}>{col.name}</TableHead>
@@ -156,8 +152,6 @@ const InventoryView = () => {
                       <TableCell className="text-right">{item.karat}K</TableCell>
                       <TableCell className="text-right">{item.weightGrams}g</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">${item.sellingPrice.toLocaleString()}</TableCell>
-                      <TableCell>{item.supplier}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className={statusColor[item.status]}>
                           {item.status}
