@@ -17,9 +17,6 @@ const initialForm = {
   karat: "",
   weightGrams: "",
   quantity: "",
-  costPrice: "",
-  sellingPrice: "",
-  supplier: "",
   status: "In Stock" as string,
   image: null as File | null,
 };
@@ -255,41 +252,6 @@ const DataEntry = () => {
 
             {/* Row 3 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="costPrice">Cost Price ($)</Label>
-                <Input
-                  id="costPrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.costPrice}
-                  onChange={(e) => handleChange("costPrice", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="sellingPrice">Selling Price ($)</Label>
-                <Input
-                  id="sellingPrice"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={form.sellingPrice}
-                  onChange={(e) => handleChange("sellingPrice", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Row 4 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
-                <Input
-                  id="supplier"
-                  placeholder="Supplier name"
-                  value={form.supplier}
-                  onChange={(e) => handleChange("supplier", e.target.value)}
-                />
-              </div>
               <div className="space-y-2">
                 <Label>Status</Label>
                 <Select value={form.status} onValueChange={(v) => handleChange("status", v)}>
