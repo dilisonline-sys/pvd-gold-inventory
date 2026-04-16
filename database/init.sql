@@ -5,8 +5,12 @@
 -- for the first time. Place in /docker-entrypoint-initdb.d/
 -- -----------------------------------------------------
 
+-- 0. Create Schema
+CREATE SCHEMA IF NOT EXISTS pvd_schema;
+SET search_path TO pvd_schema;
+
 -- 1. Users Table (for authentication)
-CREATE TABLE IF NOT EXISTS users_login (
+CREATE TABLE IF NOT EXISTS pvd_schema.users_login (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
@@ -17,12 +21,11 @@ CREATE TABLE IF NOT EXISTS users_login (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_users_username ON users_login(username);
-CREATE INDEX IF NOT EXISTS idx_users_role ON users_login(role);
+CREATE INDEX IF NOT EXISTS idx_users_username ON pvd_schema.users_login(username);
+CREATE INDEX IF NOT EXISTS idx_users_role ON pvd_schema.users_login(role);
 
 -- 2. Jewelry Items Table (main inventory)
-CREATE TABLE IF NOT EXISTS jewelry_items (
+CREATE TABLE IF NOT EXISTS pvd_schema.jewelry_items (
     id VARCHAR(20) PRIMARY KEY,
     item_name VARCHAR(200) NOT NULL,
     category VARCHAR(50) NOT NULL,
@@ -36,14 +39,13 @@ CREATE TABLE IF NOT EXISTS jewelry_items (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create indexes
-CREATE INDEX IF NOT EXISTS idx_items_category ON jewelry_items(category);
-CREATE INDEX IF NOT EXISTS idx_items_status ON jewelry_items(status);
-CREATE INDEX IF NOT EXISTS idx_items_karat ON jewelry_items(karat);
-CREATE INDEX IF NOT EXISTS idx_items_date_added ON jewelry_items(date_added);
+CREATE INDEX IF NOT EXISTS idx_items_category ON pvd_schema.jewelry_items(category);
+CREATE INDEX IF NOT EXISTS idx_items_status ON pvd_schema.jewelry_items(status);
+CREATE INDEX IF NOT EXISTS idx_items_karat ON pvd_schema.jewelry_items(karat);
+CREATE INDEX IF NOT EXISTS idx_items_date_added ON pvd_schema.jewelry_items(date_added);
 
 -- 3. Custom Columns Definition Table
-CREATE TABLE IF NOT EXISTS custom_columns (
+CREATE TABLE IF NOT EXISTS pvd_schema.custom_columns (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     type VARCHAR(10) NOT NULL CHECK (type IN ('TEXT', 'NUMBER', 'DATE', 'BLOB')),
@@ -52,10 +54,10 @@ CREATE TABLE IF NOT EXISTS custom_columns (
 );
 
 -- 4. Item Custom Values Table
-CREATE TABLE IF NOT EXISTS item_custom_values (
+CREATE TABLE IF NOT EXISTS pvd_schema.item_custom_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    item_id VARCHAR(20) NOT NULL REFERENCES jewelry_items(id) ON DELETE CASCADE,
-    column_id VARCHAR(50) NOT NULL REFERENCES custom_columns(id) ON DELETE CASCADE,
+    item_id VARCHAR(20) NOT NULL REFERENCES pvd_schema.jewelry_items(id) ON DELETE CASCADE,
+    column_id VARCHAR(50) NOT NULL REFERENCES pvd_schema.custom_columns(id) ON DELETE CASCADE,
     value_text TEXT,
     value_number DECIMAL(15, 2),
     value_date DATE,
@@ -65,10 +67,10 @@ CREATE TABLE IF NOT EXISTS item_custom_values (
     UNIQUE(item_id, column_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_custom_values_item ON item_custom_values(item_id);
+CREATE INDEX IF NOT EXISTS idx_custom_values_item ON pvd_schema.item_custom_values(item_id);
 
 -- 5. Trigger function for auto-updating timestamps
-CREATE OR REPLACE FUNCTION update_updated_at_column()
+CREATE OR REPLACE FUNCTION pvd_schema.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
@@ -76,24 +78,23 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Apply triggers
-DROP TRIGGER IF EXISTS update_users_updated_at ON users_login;
+DROP TRIGGER IF EXISTS update_users_updated_at ON pvd_schema.users_login;
 CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON users_login
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    BEFORE UPDATE ON pvd_schema.users_login
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_items_updated_at ON jewelry_items;
+DROP TRIGGER IF EXISTS update_items_updated_at ON pvd_schema.jewelry_items;
 CREATE TRIGGER update_items_updated_at
-    BEFORE UPDATE ON jewelry_items
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    BEFORE UPDATE ON pvd_schema.jewelry_items
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
-DROP TRIGGER IF EXISTS update_custom_values_updated_at ON item_custom_values;
+DROP TRIGGER IF EXISTS update_custom_values_updated_at ON pvd_schema.item_custom_values;
 CREATE TRIGGER update_custom_values_updated_at
-    BEFORE UPDATE ON item_custom_values
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    BEFORE UPDATE ON pvd_schema.item_custom_values
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
 -- 6. Insert Default Super Admin (only if not exists)
-INSERT INTO users_login (id, username, password, full_name, role, active)
+INSERT INTO pvd_schema.users_login (id, username, password, full_name, role, active)
 VALUES (
     'usr_master',
     'pvd_master',
