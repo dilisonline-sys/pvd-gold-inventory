@@ -1,0 +1,140 @@
+-- =====================================================
+-- PVD Gold Jewelry Inventory - Database Schema
+-- =====================================================
+-- Run this script to create all required tables
+-- Compatible with PostgreSQL 14+
+
+-- -----------------------------------------------------
+-- 1. Users Table (for authentication)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS users_login (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    full_name VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL CHECK (role IN ('super_admin', 'data_entry', 'inventory')),
+    active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create index on username for faster lookups
+CREATE INDEX IF NOT EXISTS idx_users_username ON users_login(username);
+
+-- Create index on role for filtering
+CREATE INDEX IF NOT EXISTS idx_users_role ON users_login(role);
+
+-- -----------------------------------------------------
+-- 2. Jewelry Items Table (main inventory)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS jewelry_items (
+    id VARCHAR(20) PRIMARY KEY,
+    item_name VARCHAR(200) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    karat INTEGER NOT NULL CHECK (karat IN (10, 14, 18, 22, 24)),
+    weight_grams DECIMAL(10, 2) NOT NULL CHECK (weight_grams > 0),
+    quantity INTEGER NOT NULL DEFAULT 0 CHECK (quantity >= 0),
+    date_added DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) NOT NULL CHECK (status IN ('In Stock', 'Sold', 'On Display', 'Reserved')),
+    image_url TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create indexes for common queries
+CREATE INDEX IF NOT EXISTS idx_items_category ON jewelry_items(category);
+CREATE INDEX IF NOT EXISTS idx_items_status ON jewelry_items(status);
+CREATE INDEX IF NOT EXISTS idx_items_karat ON jewelry_items(karat);
+CREATE INDEX IF NOT EXISTS idx_items_date_added ON jewelry_items(date_added);
+
+-- -----------------------------------------------------
+-- 3. Custom Columns Definition Table
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS custom_columns (
+    id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    type VARCHAR(10) NOT NULL CHECK (type IN ('TEXT', 'NUMBER', 'DATE', 'BLOB')),
+    required BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------------------------------
+-- 4. Item Custom Values Table (stores values for custom columns)
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS item_custom_values (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    item_id VARCHAR(20) NOT NULL REFERENCES jewelry_items(id) ON DELETE CASCADE,
+    column_id VARCHAR(50) NOT NULL REFERENCES custom_columns(id) ON DELETE CASCADE,
+    value_text TEXT,
+    value_number DECIMAL(15, 2),
+    value_date DATE,
+    value_blob BYTEA,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(item_id, column_id)
+);
+
+-- Create index for faster lookups by item
+CREATE INDEX IF NOT EXISTS idx_custom_values_item ON item_custom_values(item_id);
+
+-- -----------------------------------------------------
+-- 5. Create Trigger Function for Updated At
+-- -----------------------------------------------------
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Apply trigger to users_login
+DROP TRIGGER IF EXISTS update_users_updated_at ON users_login;
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users_login
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to jewelry_items
+DROP TRIGGER IF EXISTS update_items_updated_at ON jewelry_items;
+CREATE TRIGGER update_items_updated_at
+    BEFORE UPDATE ON jewelry_items
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Apply trigger to item_custom_values
+DROP TRIGGER IF EXISTS update_custom_values_updated_at ON item_custom_values;
+CREATE TRIGGER update_custom_values_updated_at
+    BEFORE UPDATE ON item_custom_values
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- -----------------------------------------------------
+-- 6. Insert Default Super Admin User
+-- -----------------------------------------------------
+INSERT INTO users_login (id, username, password, full_name, role, active)
+VALUES (
+    'usr_master',
+    'pvd_master',
+    'b72bfgfg',
+    'PVD Master Admin',
+    'super_admin',
+    true
+)
+ON CONFLICT (id) DO NOTHING;
+
+-- Also ensure username uniqueness if somehow duplicate
+INSERT INTO users_login (id, username, password, full_name, role, active)
+VALUES (
+    'usr_master',
+    'pvd_master',
+    'b72bfgfg',
+    'PVD Master Admin',
+    'super_admin',
+    true
+)
+ON CONFLICT (username) DO NOTHING;
+
+-- =====================================================
+-- Schema Creation Complete
+-- =====================================================
