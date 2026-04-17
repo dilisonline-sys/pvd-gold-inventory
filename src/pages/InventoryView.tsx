@@ -5,9 +5,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Search, Package, Weight, Layers, ImageOff } from "lucide-react";
-import { mockInventory, categories, type JewelryItem } from "@/lib/mockData";
+import { Search, Package, Weight, Layers, ImageOff, Loader2 } from "lucide-react";
+import { categories } from "@/lib/mockData";
 import { useCustomColumns } from "@/lib/customColumns";
+import { useItems, type JewelryItem } from "@/lib/items";
 
 const statusColor: Record<JewelryItem["status"], string> = {
   "In Stock": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -21,8 +22,9 @@ const InventoryView = () => {
   const [filterCategory, setFilterCategory] = useState("all");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
   const customColumns = useCustomColumns();
+  const { items, loading, error } = useItems();
 
-  const filtered = mockInventory.filter((item) => {
+  const filtered = items.filter((item) => {
     const matchesSearch =
       item.itemName.toLowerCase().includes(search.toLowerCase()) ||
       item.id.toLowerCase().includes(search.toLowerCase());
@@ -32,16 +34,14 @@ const InventoryView = () => {
 
   const totalItems = filtered.reduce((sum, i) => sum + i.quantity, 0);
   const totalWeight = filtered.reduce((sum, i) => sum + i.weightGrams * i.quantity, 0);
-  
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="text-3xl font-display font-bold gold-text">Inventory</h2>
-        <p className="text-muted-foreground mt-1">Browse jewelry items from the Oracle database</p>
+        <p className="text-muted-foreground mt-1">Browse jewelry items from PostgreSQL</p>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {[
           { label: "Total Items", value: totalItems, icon: Layers },
@@ -61,7 +61,6 @@ const InventoryView = () => {
         ))}
       </div>
 
-      {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -85,7 +84,6 @@ const InventoryView = () => {
         </Select>
       </div>
 
-      {/* Lightbox */}
       <Dialog open={!!lightboxImg} onOpenChange={() => setLightboxImg(null)}>
         <DialogContent className="max-w-lg p-2">
           <DialogTitle className="sr-only">Image Preview</DialogTitle>
@@ -95,7 +93,12 @@ const InventoryView = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-md p-3">
+          {error}
+        </div>
+      )}
+
       <Card>
         <CardHeader className="pb-0">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -122,9 +125,15 @@ const InventoryView = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.length === 0 ? (
+                {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10 + customColumns.length} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
+                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…
+                    </TableCell>
+                  </TableRow>
+                ) : filtered.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
                       No items found
                     </TableCell>
                   </TableRow>
@@ -146,7 +155,7 @@ const InventoryView = () => {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{item.id}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{item.id.slice(0, 8)}</TableCell>
                       <TableCell className="font-medium">{item.itemName}</TableCell>
                       <TableCell>{item.category}</TableCell>
                       <TableCell className="text-right">{item.karat}K</TableCell>

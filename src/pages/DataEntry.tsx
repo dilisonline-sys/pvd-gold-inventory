@@ -7,9 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { PlusCircle, RotateCcw, Columns3, Trash2, ImagePlus } from "lucide-react";
+import { PlusCircle, RotateCcw, Columns3, Trash2, ImagePlus, Loader2 } from "lucide-react";
 import { categories, karatOptions, statusOptions } from "@/lib/mockData";
 import { useCustomColumns, addCustomColumn, removeCustomColumn, type CustomColumn } from "@/lib/customColumns";
+import { createItem, type JewelryItem } from "@/lib/items";
 
 const initialForm = {
   itemName: "",
@@ -17,7 +18,7 @@ const initialForm = {
   karat: "",
   weightGrams: "",
   quantity: "",
-  status: "In Stock" as string,
+  status: "In Stock" as JewelryItem["status"],
   image: null as File | null,
 };
 
@@ -25,11 +26,12 @@ const DataEntry = () => {
   const [form, setForm] = useState(initialForm);
   const [customValues, setCustomValues] = useState<Record<string, string>>({});
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const customColumns = useCustomColumns();
 
-  // New column dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCol, setNewCol] = useState({ name: "", type: "TEXT" as CustomColumn["type"], required: false });
+  const [savingCol, setSavingCol] = useState(false);
 
   const handleChange = (field: string, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -49,50 +51,68 @@ const DataEntry = () => {
     }
   };
 
-  const handleAddColumn = () => {
+  const handleAddColumn = async () => {
     if (!newCol.name.trim()) {
       toast.error("Column name is required");
       return;
     }
-    addCustomColumn(newCol);
-    toast.success(`Column "${newCol.name}" added — ALTER TABLE mock committed to Oracle`, {
-      description: `ALTER TABLE PVD_INVENTORY ADD (${newCol.name.toUpperCase().replace(/\s+/g, "_")} ${newCol.type === "BLOB" ? "BLOB" : newCol.type === "NUMBER" ? "NUMBER" : newCol.type === "DATE" ? "DATE" : "VARCHAR2(255)"});`,
-    });
-    setNewCol({ name: "", type: "TEXT", required: false });
-    setDialogOpen(false);
+    setSavingCol(true);
+    try {
+      await addCustomColumn(newCol);
+      toast.success(`Column "${newCol.name}" added`);
+      setNewCol({ name: "", type: "TEXT", required: false });
+      setDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to add column");
+    } finally {
+      setSavingCol(false);
+    }
   };
 
-  const handleRemoveColumn = (col: CustomColumn) => {
-    removeCustomColumn(col.id);
-    toast.success(`Column "${col.name}" removed`, {
-      description: `ALTER TABLE PVD_INVENTORY DROP COLUMN ${col.name.toUpperCase().replace(/\s+/g, "_")};`,
-    });
-    setCustomValues((prev) => {
-      const next = { ...prev };
-      delete next[col.id];
-      return next;
-    });
+  const handleRemoveColumn = async (col: CustomColumn) => {
+    try {
+      await removeCustomColumn(col.id);
+      toast.success(`Column "${col.name}" removed`);
+      setCustomValues((prev) => {
+        const next = { ...prev };
+        delete next[col.id];
+        return next;
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to remove column");
+    }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.itemName || !form.category || !form.karat || !form.weightGrams) {
       toast.error("Please fill in all required fields");
       return;
     }
-    // Check required custom fields
     for (const col of customColumns) {
       if (col.required && !customValues[col.id]) {
         toast.error(`"${col.name}" is required`);
         return;
       }
     }
-    toast.success(`"${form.itemName}" added to inventory (mock)`, {
-      description: "INSERT INTO PVD_INVENTORY (...) VALUES (...) — committed",
-    });
-    setForm(initialForm);
-    setCustomValues({});
-    setImagePreview(null);
+    setSubmitting(true);
+    try {
+      await createItem({
+        itemName: form.itemName,
+        category: form.category,
+        karat: Number(form.karat),
+        weightGrams: Number(form.weightGrams),
+        quantity: Number(form.quantity || 1),
+        status: form.status,
+        imageUrl: imagePreview || undefined,
+      });
+      toast.success(`"${form.itemName}" added to inventory`);
+      handleReset();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save item");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleReset = () => {
@@ -106,7 +126,7 @@ const DataEntry = () => {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-display font-bold gold-text">Data Entry</h2>
-          <p className="text-muted-foreground mt-1">Add new jewelry items to the Oracle database</p>
+          <p className="text-muted-foreground mt-1">Add new jewelry items to PostgreSQL</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
@@ -117,9 +137,9 @@ const DataEntry = () => {
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Add Column to PVD_INVENTORY</DialogTitle>
+              <DialogTitle>Add Custom Column</DialogTitle>
               <DialogDescription>
-                This will execute an ALTER TABLE statement on the Oracle database to add a new column.
+                Adds a row to <code>custom_columns</code> in <code>pvd_schema</code>.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-2">
@@ -136,10 +156,10 @@ const DataEntry = () => {
                 <Select value={newCol.type} onValueChange={(v) => setNewCol((p) => ({ ...p, type: v as CustomColumn["type"] }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="TEXT">VARCHAR2 (Text)</SelectItem>
+                    <SelectItem value="TEXT">TEXT</SelectItem>
                     <SelectItem value="NUMBER">NUMBER</SelectItem>
                     <SelectItem value="DATE">DATE</SelectItem>
-                    <SelectItem value="BLOB">BLOB (Image/File)</SelectItem>
+                    <SelectItem value="BLOB">BLOB (file)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -151,13 +171,13 @@ const DataEntry = () => {
                   onChange={(e) => setNewCol((p) => ({ ...p, required: e.target.checked }))}
                   className="rounded border-border"
                 />
-                <Label htmlFor="colRequired" className="cursor-pointer">Required (NOT NULL)</Label>
+                <Label htmlFor="colRequired" className="cursor-pointer">Required</Label>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleAddColumn}>
-                <PlusCircle className="h-4 w-4 mr-2" />
+              <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={savingCol}>Cancel</Button>
+              <Button onClick={handleAddColumn} disabled={savingCol}>
+                {savingCol ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
                 Add Column
               </Button>
             </DialogFooter>
@@ -165,7 +185,6 @@ const DataEntry = () => {
         </Dialog>
       </div>
 
-      {/* Active custom columns */}
       {customColumns.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {customColumns.map((col) => (
@@ -190,13 +209,12 @@ const DataEntry = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Row 1 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="itemName">Item Name *</Label>
                 <Input
                   id="itemName"
-                  placeholder="e.g. Cuban Link Chain 22&quot;"
+                  placeholder='e.g. Cuban Link Chain 22"'
                   value={form.itemName}
                   onChange={(e) => handleChange("itemName", e.target.value)}
                 />
@@ -214,7 +232,6 @@ const DataEntry = () => {
               </div>
             </div>
 
-            {/* Row 2 */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>Karat *</Label>
@@ -250,7 +267,6 @@ const DataEntry = () => {
               </div>
             </div>
 
-            {/* Row 3 */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -265,9 +281,8 @@ const DataEntry = () => {
               </div>
             </div>
 
-            {/* Image Upload (BLOB) */}
             <div className="space-y-2">
-              <Label>Item Image (BLOB)</Label>
+              <Label>Item Image</Label>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 px-4 py-2 border border-dashed border-primary/30 rounded-md cursor-pointer hover:bg-primary/5 transition-colors">
                   <ImagePlus className="h-4 w-4 text-primary" />
@@ -285,10 +300,9 @@ const DataEntry = () => {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">Stored as BLOB in Oracle — rendered from base64 in inventory view</p>
+              <p className="text-xs text-muted-foreground">Stored as base64 data URL in <code>image_url</code> column</p>
             </div>
 
-            {/* Custom columns */}
             {customColumns.length > 0 && (
               <div className="space-y-3 pt-2 border-t border-border">
                 <p className="text-sm font-medium text-muted-foreground">Custom Fields</p>
@@ -327,11 +341,11 @@ const DataEntry = () => {
             )}
 
             <div className="flex gap-3 pt-2">
-              <Button type="submit">
-                <PlusCircle className="h-4 w-4 mr-2" />
+              <Button type="submit" disabled={submitting}>
+                {submitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <PlusCircle className="h-4 w-4 mr-2" />}
                 Add Item
               </Button>
-              <Button type="button" variant="outline" onClick={handleReset}>
+              <Button type="button" variant="outline" onClick={handleReset} disabled={submitting}>
                 <RotateCcw className="h-4 w-4 mr-2" />
                 Reset
               </Button>

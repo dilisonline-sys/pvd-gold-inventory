@@ -1,58 +1,108 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { apiFetch } from "@/lib/api";
 
 export type UserRole = "super_admin" | "data_entry" | "inventory";
 
+// Backend shape (snake_case from Postgres)
+export interface ApiUser {
+  id: string;
+  username: string;
+  full_name: string;
+  role: UserRole;
+  active: boolean;
+  created_at: string;
+}
+
+// Frontend shape (camelCase used across the app)
 export interface AppUser {
   id: string;
   username: string;
-  password: string;
   fullName: string;
   role: UserRole;
   active: boolean;
   createdAt: string;
 }
 
-const USERS_KEY = "pvd_users_login";
 const SESSION_KEY = "pvd_session";
 
-const DEFAULT_ADMIN: AppUser = {
-  id: "usr_master",
-  username: "pvd_master",
-  password: "b72bfgfg",
-  fullName: "PVD Master Admin",
-  role: "super_admin",
-  active: true,
-  createdAt: new Date().toISOString(),
-};
-
-function loadUsers(): AppUser[] {
-  try {
-    const raw = localStorage.getItem(USERS_KEY);
-    const users: AppUser[] = raw ? JSON.parse(raw) : [];
-    if (!users.find((u) => u.id === DEFAULT_ADMIN.id)) {
-      users.unshift(DEFAULT_ADMIN);
-      localStorage.setItem(USERS_KEY, JSON.stringify(users));
-    }
-    return users;
-  } catch {
-    localStorage.setItem(USERS_KEY, JSON.stringify([DEFAULT_ADMIN]));
-    return [DEFAULT_ADMIN];
-  }
+export function fromApi(u: ApiUser): AppUser {
+  return {
+    id: u.id,
+    username: u.username,
+    fullName: u.full_name,
+    role: u.role,
+    active: u.active,
+    createdAt: u.created_at,
+  };
 }
 
-export function saveUsers(users: AppUser[]) {
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+// Hook: load users from backend
+export function useUsers() {
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const list = await apiFetch<ApiUser[]>("/api/users");
+      setUsers(list.map(fromApi));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+    const handler = () => refresh();
+    window.addEventListener("pvd_users_changed", handler);
+    return () => window.removeEventListener("pvd_users_changed", handler);
+  }, [refresh]);
+
+  return { users, loading, error, refresh };
+}
+
+export function notifyUsersChanged() {
   window.dispatchEvent(new Event("pvd_users_changed"));
 }
 
-export function useUsers() {
-  const [users, setUsers] = useState<AppUser[]>(loadUsers);
-  const refresh = useCallback(() => setUsers(loadUsers()), []);
-  useEffect(() => {
-    window.addEventListener("pvd_users_changed", refresh);
-    return () => window.removeEventListener("pvd_users_changed", refresh);
-  }, [refresh]);
-  return users;
+// User CRUD helpers (call backend)
+export async function createUser(input: { username: string; password: string; fullName: string; role: UserRole; active: boolean }): Promise<AppUser> {
+  const created = await apiFetch<ApiUser>("/api/users", {
+    method: "POST",
+    body: JSON.stringify({
+      username: input.username,
+      password: input.password,
+      full_name: input.fullName,
+      role: input.role,
+      active: input.active,
+    }),
+  });
+  notifyUsersChanged();
+  return fromApi(created);
+}
+
+export async function updateUser(id: string, input: { username: string; password?: string; fullName: string; role: UserRole; active: boolean }): Promise<AppUser> {
+  const updated = await apiFetch<ApiUser>(`/api/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      username: input.username,
+      password: input.password || undefined,
+      full_name: input.fullName,
+      role: input.role,
+      active: input.active,
+    }),
+  });
+  notifyUsersChanged();
+  return fromApi(updated);
+}
+
+export async function deleteUser(id: string): Promise<void> {
+  await apiFetch(`/api/users/${id}`, { method: "DELETE" });
+  notifyUsersChanged();
 }
 
 // Role permissions
@@ -74,10 +124,10 @@ export function getRoleLabel(role: UserRole): string {
   }
 }
 
-// Auth context
+// Auth context — login hits the backend
 interface AuthContextValue {
   user: AppUser | null;
-  login: (username: string, password: string) => string | null;
+  login: (username: string, password: string) => Promise<string | null>;
   logout: () => void;
 }
 
@@ -93,15 +143,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   });
 
-  const login = useCallback((username: string, password: string): string | null => {
-    const users = loadUsers();
-    const found = users.find(
-      (u) => u.username.toLowerCase() === username.toLowerCase() && u.password === password && u.active
-    );
-    if (!found) return "Invalid credentials or account disabled";
-    localStorage.setItem(SESSION_KEY, JSON.stringify(found));
-    setUser(found);
-    return null;
+  const login = useCallback(async (username: string, password: string): Promise<string | null> => {
+    try {
+      const apiUser = await apiFetch<ApiUser>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      });
+      const u = fromApi(apiUser);
+      localStorage.setItem(SESSION_KEY, JSON.stringify(u));
+      setUser(u);
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Login failed";
+    }
   }, []);
 
   const logout = useCallback(() => {

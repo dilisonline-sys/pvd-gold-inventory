@@ -5,11 +5,10 @@ import pkg from "pg";
 const { Pool } = pkg;
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
 
 const PORT = process.env.PORT || 4000;
 
-// Default pool from env (used by /api/* routes that don't pass overrides)
 const defaultPool = new Pool({
   host: process.env.PG_HOST || "db",
   port: Number(process.env.PG_PORT || 5432),
@@ -32,9 +31,11 @@ function buildPool(cfg) {
   });
 }
 
+const t = (name) => `"${DEFAULT_SCHEMA}"."${name}"`;
+
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-// Test connection — accepts a config in body, opens a temp pool, lists tables in schema
+// Test connection
 app.post("/api/test-connection", async (req, res) => {
   const cfg = req.body || {};
   const schema = cfg.schema || "pvd_schema";
@@ -47,11 +48,7 @@ app.post("/api/test-connection", async (req, res) => {
       "SELECT tablename FROM pg_tables WHERE schemaname = $1 ORDER BY tablename",
       [schema]
     );
-    res.json({
-      database: cfg.database,
-      schema,
-      tables: rows.map((r) => r.tablename),
-    });
+    res.json({ database: cfg.database, schema, tables: rows.map((r) => r.tablename) });
   } catch (e) {
     res.status(500).json({ error: e.message });
   } finally {
@@ -59,10 +56,21 @@ app.post("/api/test-connection", async (req, res) => {
   }
 });
 
-// Helper to qualify table names with the active schema
-const t = (name) => `"${DEFAULT_SCHEMA}"."${name}"`;
+// ---- Auth ----
+app.post("/api/auth/login", async (req, res) => {
+  const { username, password } = req.body || {};
+  try {
+    const { rows } = await defaultPool.query(
+      `SELECT id, username, full_name, role, active, created_at FROM ${t("users_login")}
+       WHERE LOWER(username) = LOWER($1) AND password_hash = $2 AND active = true`,
+      [username, password]
+    );
+    if (!rows[0]) return res.status(401).json({ error: "Invalid credentials or account disabled" });
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
-// ----- Users -----
+// ---- Users CRUD ----
 app.get("/api/users", async (_req, res) => {
   try {
     const { rows } = await defaultPool.query(
@@ -72,20 +80,43 @@ app.get("/api/users", async (_req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post("/api/auth/login", async (req, res) => {
-  const { username, password } = req.body || {};
+app.post("/api/users", async (req, res) => {
+  const { username, password, full_name, role, active } = req.body || {};
   try {
     const { rows } = await defaultPool.query(
-      `SELECT id, username, full_name, role, active FROM ${t("users_login")}
-       WHERE LOWER(username) = LOWER($1) AND password_hash = $2 AND active = true`,
-      [username, password]
+      `INSERT INTO ${t("users_login")} (username, password_hash, full_name, role, active)
+       VALUES ($1,$2,$3,$4,$5)
+       RETURNING id, username, full_name, role, active, created_at`,
+      [username, password, full_name, role, active !== false]
     );
-    if (!rows[0]) return res.status(401).json({ error: "Invalid credentials" });
     res.json(rows[0]);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ----- Jewelry items -----
+app.put("/api/users/:id", async (req, res) => {
+  const { username, password, full_name, role, active } = req.body || {};
+  try {
+    const fields = ["username = $1", "full_name = $2", "role = $3", "active = $4"];
+    const vals = [username, full_name, role, active];
+    if (password) { fields.push(`password_hash = $${vals.length + 1}`); vals.push(password); }
+    vals.push(req.params.id);
+    const { rows } = await defaultPool.query(
+      `UPDATE ${t("users_login")} SET ${fields.join(", ")} WHERE id = $${vals.length}
+       RETURNING id, username, full_name, role, active, created_at`,
+      vals
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/users/:id", async (req, res) => {
+  try {
+    await defaultPool.query(`DELETE FROM ${t("users_login")} WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Jewelry items ----
 app.get("/api/items", async (_req, res) => {
   try {
     const { rows } = await defaultPool.query(
@@ -108,7 +139,14 @@ app.post("/api/items", async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-// ----- Custom columns -----
+app.delete("/api/items/:id", async (req, res) => {
+  try {
+    await defaultPool.query(`DELETE FROM ${t("jewelry_items")} WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Custom columns ----
 app.get("/api/custom-columns", async (_req, res) => {
   try {
     const { rows } = await defaultPool.query(`SELECT * FROM ${t("custom_columns")} ORDER BY created_at`);
