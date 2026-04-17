@@ -1,27 +1,28 @@
 import { useState } from "react";
-import { useUsers, saveUsers, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
+import { useUsers, createUser, updateUser, deleteUser, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, ShieldCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, ShieldCheck, Loader2 } from "lucide-react";
 
 const ROLES: UserRole[] = ["super_admin", "data_entry", "inventory"];
 
 const emptyForm = { username: "", password: "", fullName: "", role: "data_entry" as UserRole, active: true };
 
 const UsersManagement = () => {
-  const users = useUsers();
+  const { users, loading, error } = useUsers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const openAdd = () => {
     setEditingId(null);
@@ -31,51 +32,45 @@ const UsersManagement = () => {
 
   const openEdit = (user: AppUser) => {
     setEditingId(user.id);
-    setForm({ username: user.username, password: user.password, fullName: user.fullName, role: user.role, active: user.active });
+    setForm({ username: user.username, password: "", fullName: user.fullName, role: user.role, active: user.active });
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!form.username.trim() || !form.password.trim() || !form.fullName.trim()) {
-      toast.error("All fields are required");
+  const handleSave = async () => {
+    if (!form.username.trim() || !form.fullName.trim() || (!editingId && !form.password.trim())) {
+      toast.error("Username, full name and password are required");
       return;
     }
-
-    const all = [...users];
-
-    if (editingId) {
-      const idx = all.findIndex((u) => u.id === editingId);
-      if (idx >= 0) {
-        all[idx] = { ...all[idx], ...form };
-        saveUsers(all);
-        toast.success("User updated", { description: `UPDATE users_login SET ... WHERE username = '${form.username}'` });
+    setSaving(true);
+    try {
+      if (editingId) {
+        await updateUser(editingId, form);
+        toast.success("User updated");
+      } else {
+        await createUser(form);
+        toast.success("User created");
       }
-    } else {
-      if (all.find((u) => u.username.toLowerCase() === form.username.toLowerCase())) {
-        toast.error("Username already exists");
-        return;
-      }
-      const newUser: AppUser = {
-        id: `usr_${Date.now()}`,
-        ...form,
-        createdAt: new Date().toISOString(),
-      };
-      all.push(newUser);
-      saveUsers(all);
-      toast.success("User created", { description: `INSERT INTO users_login VALUES ('${form.username}', ...)` });
+      setDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
     }
-    setDialogOpen(false);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (id === "usr_master") {
       toast.error("Cannot delete the master admin");
       return;
     }
-    const all = users.filter((u) => u.id !== id);
-    saveUsers(all);
-    setDeleteConfirm(null);
-    toast.success("User deleted", { description: `DELETE FROM users_login WHERE id = '${id}'` });
+    try {
+      await deleteUser(id);
+      toast.success("User deleted");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   const roleBadgeColor: Record<UserRole, string> = {
@@ -91,12 +86,18 @@ const UsersManagement = () => {
           <h2 className="text-2xl font-display font-bold gold-text flex items-center gap-2">
             <Users className="h-6 w-6" /> Users Management
           </h2>
-          <p className="text-sm text-muted-foreground mt-1">Manage users_login table in Oracle Database</p>
+          <p className="text-sm text-muted-foreground mt-1">Manage users_login table in PostgreSQL</p>
         </div>
         <Button onClick={openAdd}>
           <Plus className="h-4 w-4 mr-1" /> Add User
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/30 text-destructive text-sm rounded-md p-3">
+          {error}
+        </div>
+      )}
 
       <Card className="border-border">
         <CardContent className="p-0">
@@ -112,42 +113,54 @@ const UsersManagement = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-mono text-sm flex items-center gap-2">
-                    {user.id === "usr_master" && <ShieldCheck className="h-4 w-4 text-primary" />}
-                    {user.username}
-                  </TableCell>
-                  <TableCell>{user.fullName}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={roleBadgeColor[user.role]}>
-                      {getRoleLabel(user.role)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={user.active ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-destructive/20 text-destructive border-destructive/30"}>
-                      {user.active ? "Active" : "Disabled"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {new Date(user.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-right space-x-2">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => setDeleteConfirm(user.id)}
-                      disabled={user.id === "usr_master"}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No users</TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-mono text-sm flex items-center gap-2">
+                      {user.id === "usr_master" && <ShieldCheck className="h-4 w-4 text-primary" />}
+                      {user.username}
+                    </TableCell>
+                    <TableCell>{user.fullName}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={roleBadgeColor[user.role]}>
+                        {getRoleLabel(user.role)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={user.active ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-destructive/20 text-destructive border-destructive/30"}>
+                        {user.active ? "Active" : "Disabled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(user.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right space-x-2">
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteConfirm(user.id)}
+                        disabled={user.id === "usr_master"}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -169,7 +182,7 @@ const UsersManagement = () => {
               <Input value={form.fullName} onChange={(e) => setForm({ ...form, fullName: e.target.value })} placeholder="e.g. John Doe" />
             </div>
             <div className="space-y-2">
-              <Label>Password</Label>
+              <Label>{editingId ? "Password (leave empty to keep)" : "Password"}</Label>
               <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Enter password" />
             </div>
             <div className="space-y-2">
@@ -189,8 +202,11 @@ const UsersManagement = () => {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingId ? "Update" : "Create"}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>Cancel</Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {editingId ? "Update" : "Create"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

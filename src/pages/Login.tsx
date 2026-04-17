@@ -4,18 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Database, LogIn } from "lucide-react";
+import { Database, LogIn, Loader2 } from "lucide-react";
 
 const Login = () => {
   const { login } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    const err = login(username, password);
+    setLoading(true);
+    const err = await login(username, password);
+    setLoading(false);
     if (err) setError(err);
   };
 
@@ -56,8 +59,9 @@ const Login = () => {
                 placeholder="Enter password"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={!username || !password}>
-              <LogIn className="h-4 w-4 mr-2" /> Sign In
+            <Button type="submit" className="w-full" disabled={!username || !password || loading}>
+              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <LogIn className="h-4 w-4 mr-2" />}
+              Sign In
             </Button>
           </form>
         </CardContent>
