@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { Database, CheckCircle2, XCircle, Loader2, TableProperties } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 const PG_CONFIG_KEY = "pvd_pg_config";
 
@@ -56,47 +57,18 @@ const ConnectionSettings = () => {
     setErrorMessage("");
 
     try {
-      const response = await fetch(`http://${config.host}:${config.port}`, {
-        method: "HEAD",
-        mode: "no-cors",
-        signal: AbortSignal.timeout(3000),
+      const result = await apiFetch<ConnectionResult>("/api/test-connection", {
+        method: "POST",
+        body: JSON.stringify(config),
       });
-
-      // Since we can't directly query PostgreSQL from the browser,
-      // we simulate a successful connection with schema info.
-      // In production, this would call a backend API endpoint.
-      const schema = config.schema || "public";
-      const result: ConnectionResult = {
-        database: config.database,
-        schema: schema,
-        tables: [
-          "users_login",
-          "jewelry_items",
-          "custom_columns",
-          "item_custom_values",
-        ],
-      };
-
       setConnectionResult(result);
       setStatus("connected");
-      toast.success(`Connected to ${config.database} → ${schema}`);
-    } catch {
-      // Even if fetch fails (expected for PG port), show mock result for demo
-      const schema = config.schema || "public";
-      const result: ConnectionResult = {
-        database: config.database,
-        schema: schema,
-        tables: [
-          "users_login",
-          "jewelry_items",
-          "custom_columns",
-          "item_custom_values",
-        ],
-      };
-
-      setConnectionResult(result);
-      setStatus("connected");
-      toast.success(`Connected to ${config.database} → ${schema} (mock)`);
+      toast.success(`Connected to ${result.database} → ${result.schema}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Connection failed";
+      setErrorMessage(msg);
+      setStatus("error");
+      toast.error(msg);
     }
   };
 
