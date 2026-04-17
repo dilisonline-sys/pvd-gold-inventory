@@ -6,6 +6,14 @@ services:
     ports:
       - "3000:80"
     depends_on:
+      - api
+    restart: unless-stopped
+
+  api:
+    build: ./api
+    ports:
+      - "4000:4000"
+    depends_on:
       db:
         condition: service_healthy
     environment:
@@ -14,6 +22,8 @@ services:
       - PG_DATABASE=pvd_jewelry
       - PG_USER=pvd_admin
       - PG_PASSWORD=changeme_in_production
+      - PG_SCHEMA=pvd_schema
+      - PG_SSL=false
     restart: unless-stopped
 
   db:
