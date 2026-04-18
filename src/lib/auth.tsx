@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, setAuthToken } from "@/lib/api";
 
 export type UserRole = "super_admin" | "data_entry" | "inventory";
 
@@ -145,10 +145,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
     try {
-      const apiUser = await apiFetch<ApiUser>("/api/auth/login", {
+      const resp = await apiFetch<ApiUser & { token: string }>("/api/auth/login", {
         method: "POST",
         body: JSON.stringify({ username, password }),
       });
+      const { token, ...apiUser } = resp;
+      setAuthToken(token);
       const u = fromApi(apiUser);
       localStorage.setItem(SESSION_KEY, JSON.stringify(u));
       setUser(u);
@@ -159,6 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    setAuthToken(null);
     localStorage.removeItem(SESSION_KEY);
     setUser(null);
   }, []);
