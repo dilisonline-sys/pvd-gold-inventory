@@ -14,8 +14,7 @@ services:
     ports:
       - "4000:4000"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     environment:
       - PG_HOST=db
       - PG_PORT=5432
