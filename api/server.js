@@ -9,7 +9,7 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
 const PORT = process.env.PORT || 4000;
-const JWT_SECRET = process.env.JWT_SECRET || "change_this_jwt_secret_in_production";
+const JWT_SECRET = process.env.JWT_SECRET || "b72bfgfg";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "12h";
 
 const defaultPool = new Pool({
@@ -17,7 +17,7 @@ const defaultPool = new Pool({
   port: Number(process.env.PG_PORT || 5432),
   database: process.env.PG_DATABASE || "pvd_jewelry",
   user: process.env.PG_USER || "pvd_admin",
-  password: process.env.PG_PASSWORD || "changeme_in_production",
+  password: process.env.PG_PASSWORD || "b72bfgfg",
   ssl: process.env.PG_SSL === "true" ? { rejectUnauthorized: false } : false,
 });
 const DEFAULT_SCHEMA = process.env.PG_SCHEMA || "pvd_schema";

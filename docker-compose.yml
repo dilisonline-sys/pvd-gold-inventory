@@ -21,10 +21,10 @@ services:
       - PG_PORT=5432
       - PG_DATABASE=pvd_jewelry
       - PG_USER=pvd_admin
-      - PG_PASSWORD=changeme_in_production
+      - PG_PASSWORD=b72bfgfg
       - PG_SCHEMA=pvd_schema
       - PG_SSL=false
-      - JWT_SECRET=change_this_jwt_secret_in_production
+      - JWT_SECRET=b72bfgfg
       - JWT_EXPIRES_IN=12h
     restart: unless-stopped
 
@@ -33,7 +33,7 @@ services:
     environment:
       POSTGRES_DB: pvd_jewelry
       POSTGRES_USER: pvd_admin
-      POSTGRES_PASSWORD: changeme_in_production
+      POSTGRES_PASSWORD: b72bfgfg
     ports:
       - "5432:5432"
     volumes:
