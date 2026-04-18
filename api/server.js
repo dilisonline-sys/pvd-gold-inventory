@@ -87,7 +87,7 @@ app.post("/api/auth/login", async (req, res) => {
   try {
     const { rows } = await defaultPool.query(
       `SELECT id, username, full_name, role, active, created_at FROM ${t("users_login")}
-       WHERE LOWER(username) = LOWER($1) AND password_hash = $2 AND active = true`,
+       WHERE LOWER(username) = LOWER($1) AND password = $2 AND active = true`,
       [username, password]
     );
     if (!rows[0]) return res.status(401).json({ error: "Invalid credentials or account disabled" });
@@ -115,7 +115,7 @@ app.post("/api/users", requireAuth, requireRole("super_admin"), async (req, res)
   const { username, password, full_name, role, active } = req.body || {};
   try {
     const { rows } = await defaultPool.query(
-      `INSERT INTO ${t("users_login")} (username, password_hash, full_name, role, active)
+      `INSERT INTO ${t("users_login")} (username, password, full_name, role, active)
        VALUES ($1,$2,$3,$4,$5)
        RETURNING id, username, full_name, role, active, created_at`,
       [username, password, full_name, role, active !== false]
@@ -129,7 +129,7 @@ app.put("/api/users/:id", requireAuth, requireRole("super_admin"), async (req, r
   try {
     const fields = ["username = $1", "full_name = $2", "role = $3", "active = $4"];
     const vals = [username, full_name, role, active];
-    if (password) { fields.push(`password_hash = $${vals.length + 1}`); vals.push(password); }
+    if (password) { fields.push(`password = $${vals.length + 1}`); vals.push(password); }
     vals.push(req.params.id);
     const { rows } = await defaultPool.query(
       `UPDATE ${t("users_login")} SET ${fields.join(", ")} WHERE id = $${vals.length}
