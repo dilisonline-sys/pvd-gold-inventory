@@ -24,6 +24,8 @@ services:
       - PG_PASSWORD=changeme_in_production
       - PG_SCHEMA=pvd_schema
       - PG_SSL=false
+      - JWT_SECRET=change_this_jwt_secret_in_production
+      - JWT_EXPIRES_IN=12h
     restart: unless-stopped
 
   db:
