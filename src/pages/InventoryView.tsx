@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -8,10 +8,11 @@ import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Search, Package, Weight, Layers, ImageOff, Loader2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { categories } from "@/lib/mockData";
 import { useCustomColumns } from "@/lib/customColumns";
 import { useItems, deleteItem, type JewelryItem } from "@/lib/items";
 import { useAuth } from "@/lib/auth";
+import { useCategories } from "@/lib/categories";
+import CategoriesManager from "@/components/CategoriesManager";
 
 const statusColor: Record<JewelryItem["status"], string> = {
   "In Stock": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -29,7 +30,9 @@ const InventoryView = () => {
   const customColumns = useCustomColumns();
   const { items, loading, error } = useItems();
   const { user } = useAuth();
+  const { categories } = useCategories();
   const isSuperAdmin = user?.role === "super_admin";
+  const canManageCats = isSuperAdmin || user?.role === "data_entry";
 
   const handleDelete = async () => {
     if (!deleteConfirm) return;
@@ -54,32 +57,66 @@ const InventoryView = () => {
   });
 
   const totalItems = filtered.reduce((sum, i) => sum + i.quantity, 0);
-  const totalWeight = filtered.reduce((sum, i) => sum + i.weightGrams * i.quantity, 0);
+
+  // Subtotal weight per karat
+  const weightByKarat = useMemo(() => {
+    const map = new Map<number, number>();
+    for (const i of filtered) {
+      map.set(i.karat, (map.get(i.karat) || 0) + i.weightGrams * i.quantity);
+    }
+    return Array.from(map.entries()).sort((a, b) => b[0] - a[0]);
+  }, [filtered]);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-display font-bold gold-text">Inventory</h2>
-        <p className="text-muted-foreground mt-1">Browse jewelry items from PostgreSQL</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-3xl font-display font-bold gold-text">Inventory</h2>
+          <p className="text-muted-foreground mt-1">Browse jewelry items from PostgreSQL</p>
+        </div>
+        {canManageCats && <CategoriesManager />}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {[
-          { label: "Total Items", value: totalItems, icon: Layers },
-          { label: "Total Weight", value: `${totalWeight.toFixed(1)}g`, icon: Weight },
-        ].map((stat) => (
-          <Card key={stat.label} className="gold-glow">
-            <CardContent className="flex items-center gap-4 py-4">
-              <div className="p-2 rounded-md bg-primary/10">
-                <stat.icon className="h-5 w-5 text-primary" />
+      {/* Total Items + per-karat subtotal cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+        <Card className="gold-glow">
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="p-2 rounded-md bg-primary/10">
+              <Layers className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Total Items</p>
+              <p className="text-xl font-display font-bold">{totalItems}</p>
+            </div>
+          </CardContent>
+        </Card>
+        {weightByKarat.length === 0 ? (
+          <Card>
+            <CardContent className="flex items-center gap-3 py-4">
+              <div className="p-2 rounded-md bg-muted">
+                <Weight className="h-5 w-5 text-muted-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="text-xl font-display font-bold">{stat.value}</p>
+                <p className="text-sm text-muted-foreground">Weight</p>
+                <p className="text-xl font-display font-bold">0g</p>
               </div>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          weightByKarat.map(([karat, weight]) => (
+            <Card key={karat}>
+              <CardContent className="flex items-center gap-3 py-4">
+                <div className="p-2 rounded-md bg-primary/10">
+                  <Weight className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">{karat}K Subtotal</p>
+                  <p className="text-xl font-display font-bold">{weight.toFixed(1)}g</p>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3">
@@ -99,7 +136,7 @@ const InventoryView = () => {
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             {categories.map((c) => (
-              <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
