@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { Database, PlusCircle, Package, Settings, Users, LogOut } from "lucide-react";
+import { Database, PlusCircle, Package, Settings, Users, LogOut, Tag, TagsIcon } from "lucide-react";
 import { useAuth, canAccessRoute, getRoleLabel } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 const allNavItems = [
   { to: "/", icon: Package, label: "Inventory" },
   { to: "/data-entry", icon: PlusCircle, label: "Data Entry" },
+  { to: "/products", icon: Tag, label: "Products" },
+  { to: "/product-entry", icon: TagsIcon, label: "Product Entry" },
   { to: "/settings", icon: Settings, label: "Connection" },
   { to: "/users", icon: Users, label: "Users" },
 ];

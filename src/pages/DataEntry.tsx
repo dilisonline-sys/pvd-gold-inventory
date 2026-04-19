@@ -8,9 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { PlusCircle, RotateCcw, Columns3, Trash2, ImagePlus, Loader2 } from "lucide-react";
-import { categories, karatOptions, statusOptions } from "@/lib/mockData";
+import { karatOptions, statusOptions } from "@/lib/mockData";
 import { useCustomColumns, addCustomColumn, removeCustomColumn, type CustomColumn } from "@/lib/customColumns";
 import { createItem, type JewelryItem } from "@/lib/items";
+import { useCategories } from "@/lib/categories";
+import { useAuth } from "@/lib/auth";
+import CategoriesManager from "@/components/CategoriesManager";
 
 const initialForm = {
   itemName: "",
@@ -28,6 +31,9 @@ const DataEntry = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const customColumns = useCustomColumns();
+  const { categories } = useCategories();
+  const { user } = useAuth();
+  const canManageCats = user?.role === "super_admin" || user?.role === "data_entry";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCol, setNewCol] = useState({ name: "", type: "TEXT" as CustomColumn["type"], required: false });
@@ -123,11 +129,13 @@ const DataEntry = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-3xl font-display font-bold gold-text">Data Entry</h2>
           <p className="text-muted-foreground mt-1">Add new jewelry items to PostgreSQL</p>
         </div>
+        <div className="flex items-center gap-2">
+          {canManageCats && <CategoriesManager />}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" className="gap-2">
@@ -183,6 +191,7 @@ const DataEntry = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {customColumns.length > 0 && (
@@ -225,7 +234,7 @@ const DataEntry = () => {
                   <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

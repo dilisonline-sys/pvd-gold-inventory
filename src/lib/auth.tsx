@@ -116,9 +116,9 @@ export async function deleteUser(id: string): Promise<void> {
 
 // Role permissions
 const ROLE_ROUTES: Record<UserRole, string[]> = {
-  super_admin: ["/", "/data-entry", "/settings", "/users"],
-  data_entry: ["/", "/data-entry"],
-  inventory: ["/"],
+  super_admin: ["/", "/data-entry", "/products", "/product-entry", "/settings", "/users"],
+  data_entry: ["/", "/data-entry", "/products", "/product-entry"],
+  inventory: ["/", "/products"],
 };
 
 export function canAccessRoute(role: UserRole, path: string): boolean {

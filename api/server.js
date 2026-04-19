@@ -230,4 +230,96 @@ app.delete("/api/custom-columns/:id", requireAuth, requireRole("super_admin"), a
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ---- Categories ----
+app.get("/api/categories", requireAuth, async (_req, res) => {
+  try {
+    const { rows } = await defaultPool.query(`SELECT id, name FROM ${t("categories")} ORDER BY name`);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/categories", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+  try {
+    const { rows } = await defaultPool.query(
+      `INSERT INTO ${t("categories")} (name) VALUES ($1) RETURNING id, name`,
+      [name.trim()]
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/categories/:id", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+  const { name } = req.body || {};
+  if (!name || !name.trim()) return res.status(400).json({ error: "Name is required" });
+  try {
+    const { rows: existing } = await defaultPool.query(
+      `SELECT name FROM ${t("categories")} WHERE id = $1`, [req.params.id]
+    );
+    if (!existing[0]) return res.status(404).json({ error: "Category not found" });
+    const oldName = existing[0].name;
+    const newName = name.trim();
+    const { rows } = await defaultPool.query(
+      `UPDATE ${t("categories")} SET name = $1 WHERE id = $2 RETURNING id, name`,
+      [newName, req.params.id]
+    );
+    // Keep dependent rows in sync
+    await defaultPool.query(`UPDATE ${t("jewelry_items")} SET category = $1 WHERE category = $2`, [newName, oldName]);
+    await defaultPool.query(`UPDATE ${t("products")} SET category = $1 WHERE category = $2`, [newName, oldName]);
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/categories/:id", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+  try {
+    await defaultPool.query(`DELETE FROM ${t("categories")} WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ---- Products ----
+app.get("/api/products", requireAuth, async (_req, res) => {
+  try {
+    const { rows } = await defaultPool.query(
+      `SELECT * FROM ${t("products")} ORDER BY date_added DESC`
+    );
+    res.json(rows);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post("/api/products", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+  const p = req.body || {};
+  try {
+    const { rows } = await defaultPool.query(
+      `INSERT INTO ${t("products")}
+       (product_name, sku, category, karat, description, price, image_url)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [p.product_name, p.sku || null, p.category, p.karat, p.description || null, p.price ?? null, p.image_url || null]
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.put("/api/products/:id", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+  const p = req.body || {};
+  try {
+    const { rows } = await defaultPool.query(
+      `UPDATE ${t("products")} SET
+         product_name = $1, sku = $2, category = $3, karat = $4,
+         description = $5, price = $6, image_url = $7
+       WHERE id = $8 RETURNING *`,
+      [p.product_name, p.sku || null, p.category, p.karat, p.description || null, p.price ?? null, p.image_url || null, req.params.id]
+    );
+    res.json(rows[0]);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.delete("/api/products/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
+  try {
+    await defaultPool.query(`DELETE FROM ${t("products")} WHERE id = $1`, [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 app.listen(PORT, () => console.log(`API listening on :${PORT} (schema=${DEFAULT_SCHEMA})`));

@@ -4,15 +4,10 @@
 -- Run this script to create all required tables
 -- Compatible with PostgreSQL 14+
 
--- -----------------------------------------------------
--- 0. Create Schema
--- -----------------------------------------------------
 CREATE SCHEMA IF NOT EXISTS pvd_schema;
 SET search_path TO pvd_schema;
 
--- -----------------------------------------------------
--- 1. Users Table (for authentication)
--- -----------------------------------------------------
+-- Users
 CREATE TABLE IF NOT EXISTS pvd_schema.users_login (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) UNIQUE NOT NULL,
@@ -23,13 +18,22 @@ CREATE TABLE IF NOT EXISTS pvd_schema.users_login (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE INDEX IF NOT EXISTS idx_users_username ON pvd_schema.users_login(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON pvd_schema.users_login(role);
 
--- -----------------------------------------------------
--- 2. Jewelry Items Table (main inventory)
--- -----------------------------------------------------
+-- Categories
+CREATE TABLE IF NOT EXISTS pvd_schema.categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+INSERT INTO pvd_schema.categories (name) VALUES
+    ('Chains'), ('Bracelets'), ('Rings'), ('Earrings'),
+    ('Pendants'), ('Necklaces'), ('Bangles')
+ON CONFLICT (name) DO NOTHING;
+
+-- Jewelry Items
 CREATE TABLE IF NOT EXISTS pvd_schema.jewelry_items (
     id VARCHAR(20) PRIMARY KEY,
     item_name VARCHAR(200) NOT NULL,
@@ -43,15 +47,29 @@ CREATE TABLE IF NOT EXISTS pvd_schema.jewelry_items (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE INDEX IF NOT EXISTS idx_items_category ON pvd_schema.jewelry_items(category);
 CREATE INDEX IF NOT EXISTS idx_items_status ON pvd_schema.jewelry_items(status);
 CREATE INDEX IF NOT EXISTS idx_items_karat ON pvd_schema.jewelry_items(karat);
 CREATE INDEX IF NOT EXISTS idx_items_date_added ON pvd_schema.jewelry_items(date_added);
 
--- -----------------------------------------------------
--- 3. Custom Columns Definition Table
--- -----------------------------------------------------
+-- Products (catalog)
+CREATE TABLE IF NOT EXISTS pvd_schema.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_name VARCHAR(200) NOT NULL,
+    sku VARCHAR(50) UNIQUE,
+    category VARCHAR(50) NOT NULL,
+    karat INTEGER NOT NULL CHECK (karat IN (10, 14, 18, 22, 24)),
+    description TEXT,
+    price DECIMAL(12, 2),
+    image_url TEXT,
+    date_added DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX IF NOT EXISTS idx_products_category ON pvd_schema.products(category);
+CREATE INDEX IF NOT EXISTS idx_products_karat ON pvd_schema.products(karat);
+
+-- Custom columns
 CREATE TABLE IF NOT EXISTS pvd_schema.custom_columns (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -60,9 +78,6 @@ CREATE TABLE IF NOT EXISTS pvd_schema.custom_columns (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- -----------------------------------------------------
--- 4. Item Custom Values Table
--- -----------------------------------------------------
 CREATE TABLE IF NOT EXISTS pvd_schema.item_custom_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id VARCHAR(20) NOT NULL REFERENCES pvd_schema.jewelry_items(id) ON DELETE CASCADE,
@@ -75,12 +90,9 @@ CREATE TABLE IF NOT EXISTS pvd_schema.item_custom_values (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(item_id, column_id)
 );
-
 CREATE INDEX IF NOT EXISTS idx_custom_values_item ON pvd_schema.item_custom_values(item_id);
 
--- -----------------------------------------------------
--- 5. Trigger Function for Updated At
--- -----------------------------------------------------
+-- updated_at trigger
 CREATE OR REPLACE FUNCTION pvd_schema.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -90,37 +102,26 @@ END;
 $$ language 'plpgsql';
 
 DROP TRIGGER IF EXISTS update_users_updated_at ON pvd_schema.users_login;
-CREATE TRIGGER update_users_updated_at
-    BEFORE UPDATE ON pvd_schema.users_login
-    FOR EACH ROW
-    EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON pvd_schema.users_login
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_categories_updated_at ON pvd_schema.categories;
+CREATE TRIGGER update_categories_updated_at BEFORE UPDATE ON pvd_schema.categories
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_items_updated_at ON pvd_schema.jewelry_items;
-CREATE TRIGGER update_items_updated_at
-    BEFORE UPDATE ON pvd_schema.jewelry_items
-    FOR EACH ROW
-    EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+CREATE TRIGGER update_items_updated_at BEFORE UPDATE ON pvd_schema.jewelry_items
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_products_updated_at ON pvd_schema.products;
+CREATE TRIGGER update_products_updated_at BEFORE UPDATE ON pvd_schema.products
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
 DROP TRIGGER IF EXISTS update_custom_values_updated_at ON pvd_schema.item_custom_values;
-CREATE TRIGGER update_custom_values_updated_at
-    BEFORE UPDATE ON pvd_schema.item_custom_values
-    FOR EACH ROW
-    EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+CREATE TRIGGER update_custom_values_updated_at BEFORE UPDATE ON pvd_schema.item_custom_values
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
--- -----------------------------------------------------
--- 6. Insert Default Super Admin User
--- -----------------------------------------------------
+-- Default super admin
 INSERT INTO pvd_schema.users_login (id, username, password, full_name, role, active)
-VALUES (
-    'usr_master',
-    'pvd_master',
-    'b72bfgfg',
-    'PVD Master Admin',
-    'super_admin',
-    true
-)
+VALUES ('usr_master','pvd_master','b72bfgfg','PVD Master Admin','super_admin', true)
 ON CONFLICT (id) DO NOTHING;
-
--- =====================================================
--- Schema Creation Complete
--- =====================================================
