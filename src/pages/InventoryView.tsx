@@ -46,8 +46,6 @@ const InventoryView = () => {
   };
 
   const filtered = items.filter((item) => {
-
-  const filtered = items.filter((item) => {
     const matchesSearch =
       item.itemName.toLowerCase().includes(search.toLowerCase()) ||
       item.id.toLowerCase().includes(search.toLowerCase());
@@ -145,18 +143,19 @@ const InventoryView = () => {
                   {customColumns.map((col) => (
                     <TableHead key={col.id}>{col.name}</TableHead>
                   ))}
+                  {isSuperAdmin && <TableHead className="text-right w-16">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8 + customColumns.length + (isSuperAdmin ? 1 : 0)} className="text-center text-muted-foreground py-8">
                       <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8 + customColumns.length + (isSuperAdmin ? 1 : 0)} className="text-center text-muted-foreground py-8">
                       No items found
                     </TableCell>
                   </TableRow>
@@ -194,6 +193,18 @@ const InventoryView = () => {
                           {item.customFields?.[col.id] || "—"}
                         </TableCell>
                       ))}
+                      {isSuperAdmin && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteConfirm(item)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -202,6 +213,24 @@ const InventoryView = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete item?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            This will permanently delete <span className="font-medium text-foreground">{deleteConfirm?.itemName}</span>. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
