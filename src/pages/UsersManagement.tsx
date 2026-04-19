@@ -165,7 +165,7 @@ const UsersManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={user.active ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-destructive/20 text-destructive border-destructive/30"}>
-                        {user.active ? "Active" : "Disabled"}
+                        {user.active ? "Active" : "Locked"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -178,9 +178,26 @@ const UsersManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        title={user.active ? "Lock user" : "Unlock user"}
+                        onClick={() => handleToggleLock(user)}
+                        disabled={!isSuperAdmin || user.id === "usr_master" || togglingId === user.id}
+                        className={user.active ? "text-amber-500 hover:text-amber-500" : "text-emerald-500 hover:text-emerald-500"}
+                      >
+                        {togglingId === user.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : user.active ? (
+                          <Lock className="h-4 w-4" />
+                        ) : (
+                          <Unlock className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setDeleteConfirm(user.id)}
-                        disabled={user.id === "usr_master"}
+                        disabled={!isSuperAdmin || user.id === "usr_master"}
+                        title={isSuperAdmin ? "Delete user" : "Super admin only"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
