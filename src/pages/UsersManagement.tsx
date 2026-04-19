@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUsers, createUser, updateUser, deleteUser, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
+import { useUsers, createUser, updateUser, deleteUser, setUserActive, useAuth, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, ShieldCheck, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, ShieldCheck, Loader2, Lock, Unlock } from "lucide-react";
 
 const ROLES: UserRole[] = ["super_admin", "data_entry", "inventory"];
 
