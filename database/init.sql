@@ -24,7 +24,20 @@ CREATE TABLE IF NOT EXISTS pvd_schema.users_login (
 CREATE INDEX IF NOT EXISTS idx_users_username ON pvd_schema.users_login(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON pvd_schema.users_login(role);
 
--- 2. Jewelry Items Table (main inventory)
+-- 2. Categories Table (managed list shared by inventory + products)
+CREATE TABLE IF NOT EXISTS pvd_schema.categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(100) UNIQUE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT INTO pvd_schema.categories (name) VALUES
+    ('Chains'), ('Bracelets'), ('Rings'), ('Earrings'),
+    ('Pendants'), ('Necklaces'), ('Bangles')
+ON CONFLICT (name) DO NOTHING;
+
+-- 3. Jewelry Items Table (main inventory)
 CREATE TABLE IF NOT EXISTS pvd_schema.jewelry_items (
     id VARCHAR(20) PRIMARY KEY,
     item_name VARCHAR(200) NOT NULL,
@@ -44,7 +57,25 @@ CREATE INDEX IF NOT EXISTS idx_items_status ON pvd_schema.jewelry_items(status);
 CREATE INDEX IF NOT EXISTS idx_items_karat ON pvd_schema.jewelry_items(karat);
 CREATE INDEX IF NOT EXISTS idx_items_date_added ON pvd_schema.jewelry_items(date_added);
 
--- 3. Custom Columns Definition Table
+-- 4. Products Table (catalog / SKUs, separate from inventory)
+CREATE TABLE IF NOT EXISTS pvd_schema.products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    product_name VARCHAR(200) NOT NULL,
+    sku VARCHAR(50) UNIQUE,
+    category VARCHAR(50) NOT NULL,
+    karat INTEGER NOT NULL CHECK (karat IN (10, 14, 18, 22, 24)),
+    description TEXT,
+    price DECIMAL(12, 2),
+    image_url TEXT,
+    date_added DATE NOT NULL DEFAULT CURRENT_DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_products_category ON pvd_schema.products(category);
+CREATE INDEX IF NOT EXISTS idx_products_karat ON pvd_schema.products(karat);
+
+-- 5. Custom Columns Definition Table
 CREATE TABLE IF NOT EXISTS pvd_schema.custom_columns (
     id VARCHAR(50) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
@@ -53,7 +84,7 @@ CREATE TABLE IF NOT EXISTS pvd_schema.custom_columns (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 4. Item Custom Values Table
+-- 6. Item Custom Values Table
 CREATE TABLE IF NOT EXISTS pvd_schema.item_custom_values (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     item_id VARCHAR(20) NOT NULL REFERENCES pvd_schema.jewelry_items(id) ON DELETE CASCADE,
@@ -69,7 +100,7 @@ CREATE TABLE IF NOT EXISTS pvd_schema.item_custom_values (
 
 CREATE INDEX IF NOT EXISTS idx_custom_values_item ON pvd_schema.item_custom_values(item_id);
 
--- 5. Trigger function for auto-updating timestamps
+-- 7. Trigger function for auto-updating timestamps
 CREATE OR REPLACE FUNCTION pvd_schema.update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -88,12 +119,22 @@ CREATE TRIGGER update_items_updated_at
     BEFORE UPDATE ON pvd_schema.jewelry_items
     FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_products_updated_at ON pvd_schema.products;
+CREATE TRIGGER update_products_updated_at
+    BEFORE UPDATE ON pvd_schema.products
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+
+DROP TRIGGER IF EXISTS update_categories_updated_at ON pvd_schema.categories;
+CREATE TRIGGER update_categories_updated_at
+    BEFORE UPDATE ON pvd_schema.categories
+    FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
+
 DROP TRIGGER IF EXISTS update_custom_values_updated_at ON pvd_schema.item_custom_values;
 CREATE TRIGGER update_custom_values_updated_at
     BEFORE UPDATE ON pvd_schema.item_custom_values
     FOR EACH ROW EXECUTE FUNCTION pvd_schema.update_updated_at_column();
 
--- 6. Insert Default Super Admin (only if not exists)
+-- 8. Insert Default Super Admin (only if not exists)
 INSERT INTO pvd_schema.users_login (id, username, password, full_name, role, active)
 VALUES (
     'usr_master',
