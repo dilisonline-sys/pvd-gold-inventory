@@ -129,11 +129,13 @@ const DataEntry = () => {
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-3xl font-display font-bold gold-text">Data Entry</h2>
           <p className="text-muted-foreground mt-1">Add new jewelry items to PostgreSQL</p>
         </div>
+        <div className="flex items-center gap-2">
+          {canManageCats && <CategoriesManager />}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button variant="outline" className="gap-2">
