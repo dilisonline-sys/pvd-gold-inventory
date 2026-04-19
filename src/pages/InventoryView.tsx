@@ -4,11 +4,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Search, Package, Weight, Layers, ImageOff, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Search, Package, Weight, Layers, ImageOff, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { categories } from "@/lib/mockData";
 import { useCustomColumns } from "@/lib/customColumns";
-import { useItems, type JewelryItem } from "@/lib/items";
+import { useItems, deleteItem, type JewelryItem } from "@/lib/items";
+import { useAuth } from "@/lib/auth";
 
 const statusColor: Record<JewelryItem["status"], string> = {
   "In Stock": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
