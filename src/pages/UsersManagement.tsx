@@ -17,12 +17,15 @@ const ROLES: UserRole[] = ["super_admin", "data_entry", "inventory"];
 const emptyForm = { username: "", password: "", fullName: "", role: "data_entry" as UserRole, active: true };
 
 const UsersManagement = () => {
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "super_admin";
   const { users, loading, error } = useUsers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditingId(null);
