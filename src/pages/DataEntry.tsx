@@ -191,6 +191,7 @@ const DataEntry = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {customColumns.length > 0 && (
