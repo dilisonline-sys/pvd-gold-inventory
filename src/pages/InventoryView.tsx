@@ -4,11 +4,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Search, Package, Weight, Layers, ImageOff, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Search, Package, Weight, Layers, ImageOff, Loader2, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { categories } from "@/lib/mockData";
 import { useCustomColumns } from "@/lib/customColumns";
-import { useItems, type JewelryItem } from "@/lib/items";
+import { useItems, deleteItem, type JewelryItem } from "@/lib/items";
+import { useAuth } from "@/lib/auth";
 
 const statusColor: Record<JewelryItem["status"], string> = {
   "In Stock": "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
@@ -21,8 +24,26 @@ const InventoryView = () => {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<JewelryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const customColumns = useCustomColumns();
   const { items, loading, error } = useItems();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await deleteItem(deleteConfirm.id);
+      toast.success("Item deleted");
+      setDeleteConfirm(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const filtered = items.filter((item) => {
     const matchesSearch =
@@ -122,18 +143,19 @@ const InventoryView = () => {
                   {customColumns.map((col) => (
                     <TableHead key={col.id}>{col.name}</TableHead>
                   ))}
+                  {isSuperAdmin && <TableHead className="text-right w-16">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8 + customColumns.length + (isSuperAdmin ? 1 : 0)} className="text-center text-muted-foreground py-8">
                       <Loader2 className="h-4 w-4 animate-spin inline mr-2" /> Loading…
                     </TableCell>
                   </TableRow>
                 ) : filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8 + customColumns.length} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={8 + customColumns.length + (isSuperAdmin ? 1 : 0)} className="text-center text-muted-foreground py-8">
                       No items found
                     </TableCell>
                   </TableRow>
@@ -171,6 +193,18 @@ const InventoryView = () => {
                           {item.customFields?.[col.id] || "—"}
                         </TableCell>
                       ))}
+                      {isSuperAdmin && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setDeleteConfirm(item)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}
@@ -179,6 +213,24 @@ const InventoryView = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete item?</DialogTitle>
+          </DialogHeader>
+          <p className="text-muted-foreground">
+            This will permanently delete <span className="font-medium text-foreground">{deleteConfirm?.itemName}</span>. This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)} disabled={deleting}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting}>
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

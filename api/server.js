@@ -197,7 +197,7 @@ app.post("/api/items", requireAuth, requireRole("super_admin", "data_entry"), as
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.delete("/api/items/:id", requireAuth, requireRole("super_admin", "data_entry"), async (req, res) => {
+app.delete("/api/items/:id", requireAuth, requireRole("super_admin"), async (req, res) => {
   try {
     await defaultPool.query(`DELETE FROM ${t("jewelry_items")} WHERE id = $1`, [req.params.id]);
     res.json({ ok: true });

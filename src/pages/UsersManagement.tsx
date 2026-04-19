@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useUsers, createUser, updateUser, deleteUser, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
+import { useUsers, createUser, updateUser, deleteUser, setUserActive, useAuth, type AppUser, type UserRole, getRoleLabel } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,19 +10,22 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Users, ShieldCheck, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Users, ShieldCheck, Loader2, Lock, Unlock } from "lucide-react";
 
 const ROLES: UserRole[] = ["super_admin", "data_entry", "inventory"];
 
 const emptyForm = { username: "", password: "", fullName: "", role: "data_entry" as UserRole, active: true };
 
 const UsersManagement = () => {
+  const { user: currentUser } = useAuth();
+  const isSuperAdmin = currentUser?.role === "super_admin";
   const { users, loading, error } = useUsers();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const openAdd = () => {
     setEditingId(null);
@@ -59,6 +62,10 @@ const UsersManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can delete users");
+      return;
+    }
     if (id === "usr_master") {
       toast.error("Cannot delete the master admin");
       return;
@@ -70,6 +77,26 @@ const UsersManagement = () => {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setDeleteConfirm(null);
+    }
+  };
+
+  const handleToggleLock = async (user: AppUser) => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can lock/unlock users");
+      return;
+    }
+    if (user.id === "usr_master") {
+      toast.error("Cannot lock the master admin");
+      return;
+    }
+    setTogglingId(user.id);
+    try {
+      await setUserActive(user, !user.active);
+      toast.success(user.active ? "User locked" : "User unlocked");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -138,7 +165,7 @@ const UsersManagement = () => {
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className={user.active ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-destructive/20 text-destructive border-destructive/30"}>
-                        {user.active ? "Active" : "Disabled"}
+                        {user.active ? "Active" : "Locked"}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
@@ -151,9 +178,26 @@ const UsersManagement = () => {
                       <Button
                         variant="ghost"
                         size="icon"
+                        title={user.active ? "Lock user" : "Unlock user"}
+                        onClick={() => handleToggleLock(user)}
+                        disabled={!isSuperAdmin || user.id === "usr_master" || togglingId === user.id}
+                        className={user.active ? "text-amber-500 hover:text-amber-500" : "text-emerald-500 hover:text-emerald-500"}
+                      >
+                        {togglingId === user.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : user.active ? (
+                          <Lock className="h-4 w-4" />
+                        ) : (
+                          <Unlock className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-destructive hover:text-destructive"
                         onClick={() => setDeleteConfirm(user.id)}
-                        disabled={user.id === "usr_master"}
+                        disabled={!isSuperAdmin || user.id === "usr_master"}
+                        title={isSuperAdmin ? "Delete user" : "Super admin only"}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>

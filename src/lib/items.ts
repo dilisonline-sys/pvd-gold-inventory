@@ -59,6 +59,11 @@ export async function createItem(input: Omit<JewelryItem, "id" | "dateAdded">): 
   return fromApi(created);
 }
 
+export async function deleteItem(id: string): Promise<void> {
+  await apiFetch(`/api/items/${id}`, { method: "DELETE" });
+  window.dispatchEvent(new Event(CHANGED));
+}
+
 export function useItems() {
   const [items, setItems] = useState<JewelryItem[]>([]);
   const [loading, setLoading] = useState(true);

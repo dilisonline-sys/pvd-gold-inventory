@@ -100,6 +100,15 @@ export async function updateUser(id: string, input: { username: string; password
   return fromApi(updated);
 }
 
+export async function setUserActive(user: AppUser, active: boolean): Promise<AppUser> {
+  return updateUser(user.id, {
+    username: user.username,
+    fullName: user.fullName,
+    role: user.role,
+    active,
+  });
+}
+
 export async function deleteUser(id: string): Promise<void> {
   await apiFetch(`/api/users/${id}`, { method: "DELETE" });
   notifyUsersChanged();
