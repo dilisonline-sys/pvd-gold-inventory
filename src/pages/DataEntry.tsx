@@ -8,9 +8,12 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { PlusCircle, RotateCcw, Columns3, Trash2, ImagePlus, Loader2 } from "lucide-react";
-import { categories, karatOptions, statusOptions } from "@/lib/mockData";
+import { karatOptions, statusOptions } from "@/lib/mockData";
 import { useCustomColumns, addCustomColumn, removeCustomColumn, type CustomColumn } from "@/lib/customColumns";
 import { createItem, type JewelryItem } from "@/lib/items";
+import { useCategories } from "@/lib/categories";
+import { useAuth } from "@/lib/auth";
+import CategoriesManager from "@/components/CategoriesManager";
 
 const initialForm = {
   itemName: "",
