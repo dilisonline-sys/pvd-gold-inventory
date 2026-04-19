@@ -7,6 +7,8 @@ import { AuthProvider, useAuth, canAccessRoute } from "@/lib/auth";
 import AppLayout from "./components/AppLayout";
 import InventoryView from "./pages/InventoryView";
 import DataEntry from "./pages/DataEntry";
+import ProductsView from "./pages/ProductsView";
+import ProductEntry from "./pages/ProductEntry";
 import ConnectionSettings from "./pages/ConnectionSettings";
 import UsersManagement from "./pages/UsersManagement";
 import Login from "./pages/Login";
@@ -45,6 +47,8 @@ const App = () => (
             <Route element={<AuthGate><AppLayout /></AuthGate>}>
               <Route path="/" element={<ProtectedRoute path="/"><InventoryView /></ProtectedRoute>} />
               <Route path="/data-entry" element={<ProtectedRoute path="/data-entry"><DataEntry /></ProtectedRoute>} />
+              <Route path="/products" element={<ProtectedRoute path="/products"><ProductsView /></ProtectedRoute>} />
+              <Route path="/product-entry" element={<ProtectedRoute path="/product-entry"><ProductEntry /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute path="/settings"><ConnectionSettings /></ProtectedRoute>} />
               <Route path="/users" element={<ProtectedRoute path="/users"><UsersManagement /></ProtectedRoute>} />
             </Route>
