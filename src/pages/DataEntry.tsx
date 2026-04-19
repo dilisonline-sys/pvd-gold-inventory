@@ -31,6 +31,9 @@ const DataEntry = () => {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const customColumns = useCustomColumns();
+  const { categories } = useCategories();
+  const { user } = useAuth();
+  const canManageCats = user?.role === "super_admin" || user?.role === "data_entry";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newCol, setNewCol] = useState({ name: "", type: "TEXT" as CustomColumn["type"], required: false });
@@ -228,7 +231,7 @@ const DataEntry = () => {
                   <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
                   <SelectContent>
                     {categories.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                      <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
