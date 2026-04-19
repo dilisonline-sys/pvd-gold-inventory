@@ -24,8 +24,28 @@ const InventoryView = () => {
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState("all");
   const [lightboxImg, setLightboxImg] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<JewelryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const customColumns = useCustomColumns();
   const { items, loading, error } = useItems();
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === "super_admin";
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await deleteItem(deleteConfirm.id);
+      toast.success("Item deleted");
+      setDeleteConfirm(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const filtered = items.filter((item) => {
 
   const filtered = items.filter((item) => {
     const matchesSearch =
