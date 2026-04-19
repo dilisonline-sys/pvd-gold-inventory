@@ -62,6 +62,10 @@ const UsersManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can delete users");
+      return;
+    }
     if (id === "usr_master") {
       toast.error("Cannot delete the master admin");
       return;
@@ -73,6 +77,26 @@ const UsersManagement = () => {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setDeleteConfirm(null);
+    }
+  };
+
+  const handleToggleLock = async (user: AppUser) => {
+    if (!isSuperAdmin) {
+      toast.error("Only super admins can lock/unlock users");
+      return;
+    }
+    if (user.id === "usr_master") {
+      toast.error("Cannot lock the master admin");
+      return;
+    }
+    setTogglingId(user.id);
+    try {
+      await setUserActive(user, !user.active);
+      toast.success(user.active ? "User locked" : "User unlocked");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    } finally {
+      setTogglingId(null);
     }
   };
 
