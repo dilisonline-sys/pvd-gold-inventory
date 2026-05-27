@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Production Jobs{% endblock %}
+{% block nav_production %}active{% endblock %}
+{% block page_title %}Production Jobs{% endblock %}
+
+{% block content %}
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Search</label>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Job number, description..." value="{{ request.GET.q }}">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Statuses</option>
+                    <option value="PENDING" {% if request.GET.status == 'PENDING' %}selected{% endif %}>Pending</option>
+                    <option value="IN_PROGRESS" {% if request.GET.status == 'IN_PROGRESS' %}selected{% endif %}>In Progress</option>
+                    <option value="ON_HOLD" {% if request.GET.status == 'ON_HOLD' %}selected{% endif %}>On Hold</option>
+                    <option value="COMPLETED" {% if request.GET.status == 'COMPLETED' %}selected{% endif %}>Completed</option>
+                    <option value="CANCELLED" {% if request.GET.status == 'CANCELLED' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Priority</label>
+                <select name="priority" class="form-select">
+                    <option value="">All Priorities</option>
+                    <option value="URGENT" {% if request.GET.priority == 'URGENT' %}selected{% endif %}>Urgent</option>
+                    <option value="HIGH" {% if request.GET.priority == 'HIGH' %}selected{% endif %}>High</option>
+                    <option value="MEDIUM" {% if request.GET.priority == 'MEDIUM' %}selected{% endif %}>Medium</option>
+                    <option value="LOW" {% if request.GET.priority == 'LOW' %}selected{% endif %}>Low</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small fw-semibold">Stage</label>
+                <select name="stage" class="form-select">
+                    <option value="">All Stages</option>
+                    {% for stage in stages %}
+                    <option value="{{ stage.pk }}" {% if request.GET.stage == stage.pk|stringformat:'s' %}selected{% endif %}>{{ stage.order_number }}. {{ stage.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-gold w-100"><i class="bi bi-funnel me-1"></i>Filter</button>
+            </div>
+            <div class="col-md-1">
+                <a href="{% url 'manufacturing:job_list' %}" class="btn btn-outline-secondary w-100" title="Clear"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-gear-wide-connected me-2" style="color:var(--gold);"></i>Production Jobs</span>
+        {% if user.role in 'admin,manager,supervisor' %}
+        <a href="{% url 'manufacturing:job_create' %}" class="btn btn-gold btn-sm">
+            <i class="bi bi-plus-lg me-1"></i> New Job
+        </a>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Job #</th>
+                        <th>Order</th>
+                        <th>Description</th>
+                        <th>Priority</th>
+                        <th>Current Stage</th>
+                        <th>Status</th>
+                        <th>Assigned To</th>
+                        <th>Due Date</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr class="
+                        {% if job.priority == 'URGENT' %}priority-urgent
+                        {% elif job.priority == 'HIGH' %}priority-high
+                        {% elif job.priority == 'MEDIUM' %}priority-medium
+                        {% else %}priority-low{% endif %}
+                    ">
+                        <td>
+                            <a href="{% url 'manufacturing:job_detail' job.pk %}" class="fw-bold text-decoration-none" style="color:var(--gold-dark);">
+                                {{ job.job_number }}
+                            </a>
+                        </td>
+                        <td class="text-muted small">
+                            {% if job.order %}
+                            <a href="{% url 'orders:order_detail' job.order.pk %}" class="text-decoration-none text-muted">
+                                {{ job.order.order_number }}
+                            </a>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="text-truncate" style="max-width:180px;">{{ job.description|default:"—" }}</td>
+                        <td>
+                            {% if job.priority == 'URGENT' %}
+                                <span class="badge bg-danger">Urgent</span>
+                            {% elif job.priority == 'HIGH' %}
+                                <span class="badge bg-warning text-dark">High</span>
+                            {% elif job.priority == 'MEDIUM' %}
+                                <span class="badge bg-info text-dark">Medium</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Low</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge badge-stage">{{ job.current_stage_display|default:job.current_stage|default:"—" }}</span>
+                        </td>
+                        <td>
+                            {% if job.status == 'PENDING' %}
+                                <span class="status-badge bg-secondary text-white">Pending</span>
+                            {% elif job.status == 'IN_PROGRESS' %}
+                                <span class="status-badge bg-primary text-white">In Progress</span>
+                            {% elif job.status == 'ON_HOLD' %}
+                                <span class="status-badge bg-warning text-dark">On Hold</span>
+                            {% elif job.status == 'COMPLETED' %}
+                                <span class="status-badge bg-success text-white">Completed</span>
+                            {% elif job.status == 'CANCELLED' %}
+                                <span class="status-badge bg-danger text-white">Cancelled</span>
+                            {% else %}
+                                <span class="status-badge bg-light text-muted">{{ job.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-muted small">{{ job.assigned_to.get_full_name|default:"—" }}</td>
+                        <td class="text-muted small text-nowrap">{{ job.due_date|date:"d M Y"|default:"—" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'manufacturing:job_detail' job.pk %}" class="btn btn-sm btn-outline-secondary" title="View">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if user.role in 'admin,manager,supervisor' %}
+                            <a href="{% url 'manufacturing:job_edit' job.pk %}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center text-muted py-5">
+                            <i class="bi bi-gear fs-2 d-block mb-2"></i>No production jobs found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if page_obj %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}&priority={{ request.GET.priority }}&stage={{ request.GET.stage }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}&q={{ request.GET.q }}&status={{ request.GET.status }}&priority={{ request.GET.priority }}&stage={{ request.GET.stage }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&status={{ request.GET.status }}&priority={{ request.GET.priority }}&stage={{ request.GET.stage }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

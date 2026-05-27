@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Stock Adjustment{% endblock %}
+{% block page_title %}Stock Adjustment{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card border-warning">
+            <div class="card-header py-3 d-flex align-items-center gap-2">
+                <i class="bi bi-sliders text-warning fs-5"></i>
+                <span class="fw-semibold">Stock Adjustment</span>
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-warning d-flex align-items-start gap-2 mb-4">
+                    <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+                    <div>
+                        <strong>Warning:</strong> Stock adjustments will directly modify inventory levels.
+                        Please ensure you have authorization before proceeding. All adjustments are logged.
+                    </div>
+                </div>
+
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                            {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                        </label>
+                        {% if field.field.widget.input_type == 'select' %}
+                            <select name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                                    class="form-select {% if field.errors %}is-invalid{% endif %}">
+                                {% for val, label in field.field.choices %}
+                                <option value="{{ val }}" {% if field.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        {% elif field.field.widget.input_type == 'textarea' %}
+                            <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                                      class="form-control {% if field.errors %}is-invalid{% endif %}"
+                                      rows="3" {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+                        {% else %}
+                            <input type="{{ field.field.widget.input_type|default:'text' }}"
+                                   name="{{ field.html_name }}"
+                                   id="{{ field.id_for_label }}"
+                                   class="form-control {% if field.errors %}is-invalid{% endif %}"
+                                   value="{{ field.value|default:'' }}"
+                                   {% if field.field.required %}required{% endif %}>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="invalid-feedback">{{ field.errors|join:", " }}</div>
+                        {% endif %}
+                        {% if field.help_text %}
+                            <div class="form-text text-muted">{{ field.help_text }}</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-sliders me-1"></i> Apply Adjustment
+                        </button>
+                        <a href="{% url 'inventory:stock_history' %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
