@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}My Profile{% endblock %}
+{% block page_title %}My Profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center gap-4">
+                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                         style="width:80px;height:80px;background:rgba(201,168,76,0.15);font-size:2.2rem;">
+                        <i class="bi bi-person-circle" style="color:var(--gold);"></i>
+                    </div>
+                    <div>
+                        <h4 class="mb-1 fw-bold">{{ user.get_full_name|default:user.username }}</h4>
+                        <div class="mb-2">
+                            <span class="user-badge role-{{ user.role }} me-2">{{ user.get_role_display }}</span>
+                            {% if user.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">@{{ user.username }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header py-3">
+                <i class="bi bi-person-lines-fill me-2" style="color:var(--gold);"></i>Personal Information
+            </div>
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Full Name</div>
+                        <div class="fw-semibold">{{ user.get_full_name|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Username</div>
+                        <div class="fw-semibold">{{ user.username }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Email</div>
+                        <div class="fw-semibold">{{ user.email|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Employee ID</div>
+                        <div class="fw-semibold">{{ user.employee_id|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Department</div>
+                        <div class="fw-semibold">{{ user.department|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Phone</div>
+                        <div class="fw-semibold">{{ user.phone|default:"—" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Date Joined</div>
+                        <div class="fw-semibold">{{ user.date_joined|date:"d M Y" }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="text-muted small mb-1">Last Login</div>
+                        <div class="fw-semibold">{{ user.last_login|date:"d M Y, H:i"|default:"—" }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if user.role == 'admin' %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'accounts:user_edit' user.pk %}" class="btn btn-gold">
+                <i class="bi bi-pencil me-1"></i> Edit Profile
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

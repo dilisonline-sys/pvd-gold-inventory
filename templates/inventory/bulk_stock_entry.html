@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Bulk Stock Upload{% endblock %}
+{% block nav_bulk_stock %}active{% endblock %}
+{% block page_title %}Bulk Stock Upload{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <!-- Upload Form -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header py-3">
+                <i class="bi bi-upload me-2" style="color:var(--gold);"></i>Upload CSV File
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Select CSV File <span class="text-danger">*</span></label>
+                        <input type="file" name="csv_file" class="form-control" accept=".csv" required>
+                        <div class="form-text">File must be in CSV format with the correct column headers.</div>
+                    </div>
+                    {% for field in form %}
+                        {% if field.html_name != 'csv_file' %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
+                                {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
+                            </label>
+                            {{ field }}
+                            {% if field.errors %}
+                                <div class="text-danger small">{{ field.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    <button type="submit" class="btn btn-gold">
+                        <i class="bi bi-cloud-upload me-1"></i> Upload & Process
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="col-lg-6">
+        <div class="card mb-3">
+            <div class="card-header py-3">
+                <i class="bi bi-info-circle me-2 text-info"></i>CSV Format Instructions
+            </div>
+            <div class="card-body">
+                <p class="small text-muted mb-3">Your CSV file must include the following columns (in any order):</p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered small mb-3">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Column Name</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>material_name</code></td><td><span class="text-danger">Yes</span></td><td>Name of the material</td></tr>
+                            <tr><td><code>quantity</code></td><td><span class="text-danger">Yes</span></td><td>Amount to add (numeric)</td></tr>
+                            <tr><td><code>unit_cost</code></td><td>No</td><td>Cost per unit</td></tr>
+                            <tr><td><code>supplier_name</code></td><td>No</td><td>Supplier name</td></tr>
+                            <tr><td><code>batch_number</code></td><td>No</td><td>Batch/lot number</td></tr>
+                            <tr><td><code>purity</code></td><td>No</td><td>Gold purity (e.g. 99.9)</td></tr>
+                            <tr><td><code>notes</code></td><td>No</td><td>Additional notes</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="bg-light rounded p-3 small">
+                    <strong>Sample row:</strong><br>
+                    <code>Gold Bar 24K,100.5,1800.00,Thai Gold Co.,BATCH-2024-001,99.9,Imported shipment</code>
+                </div>
+                <div class="mt-3">
+                    <a href="{% url 'inventory:bulk_stock_entry' %}?download_sample=1" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-download me-1"></i> Download Sample CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-warning">
+            <div class="card-body py-2 px-3 small">
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                <strong>Notes:</strong> Material names must exactly match existing materials in the system. Quantities must be positive numbers.
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Results -->
+{% if bulk_results %}
+<div class="card mt-4">
+    <div class="card-header py-3 d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-list-check me-2" style="color:var(--gold);"></i>Upload Results</span>
+        <div>
+            <span class="badge bg-success me-1">{{ bulk_results.success_count|default:0 }} Successful</span>
+            <span class="badge bg-danger">{{ bulk_results.error_count|default:0 }} Errors</span>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Row</th>
+                        <th>Material</th>
+                        <th>Quantity</th>
+                        <th>Status</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in bulk_results.rows %}
+                    <tr class="{% if row.status == 'error' %}table-danger{% elif row.status == 'success' %}table-success{% endif %}">
+                        <td>{{ row.row_number }}</td>
+                        <td>{{ row.material_name }}</td>
+                        <td>{{ row.quantity }}</td>
+                        <td>
+                            {% if row.status == 'success' %}
+                                <span class="badge bg-success">Success</span>
+                            {% else %}
+                                <span class="badge bg-danger">Error</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.message|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

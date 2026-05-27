@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Production Overview{% endblock %}
+{% block nav_prod_dashboard %}active{% endblock %}
+{% block page_title %}Production Overview{% endblock %}
+
+{% block extra_css %}
+<style>
+.bar-chart-row { margin-bottom: 14px; }
+.bar-chart-label { font-size: 0.8rem; color: #555; margin-bottom: 4px; }
+.bar-chart-track { background: #e9ecef; border-radius: 6px; height: 22px; position: relative; }
+.bar-chart-fill { height: 100%; border-radius: 6px; transition: width 0.5s; display: flex; align-items: center; padding-left: 8px; }
+.bar-chart-fill span { font-size: 0.75rem; color: #fff; font-weight: 600; white-space: nowrap; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Status Breakdown Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#6c757d;">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:rgba(108,117,125,0.12);">
+                    <i class="bi bi-hourglass fs-4 text-secondary"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ status_counts.PENDING|default:"0" }}</div>
+                    <div class="stat-label">Pending</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#0d6efd;">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:rgba(13,110,253,0.12);">
+                    <i class="bi bi-gear-fill fs-4 text-primary"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ status_counts.IN_PROGRESS|default:"0" }}</div>
+                    <div class="stat-label">In Progress</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#198754;">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:rgba(25,135,84,0.12);">
+                    <i class="bi bi-check-circle-fill fs-4 text-success"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ status_counts.COMPLETED|default:"0" }}</div>
+                    <div class="stat-label">Completed</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#dc3545;">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:52px;height:52px;background:rgba(220,53,69,0.12);">
+                    <i class="bi bi-x-circle-fill fs-4 text-danger"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ status_counts.CANCELLED|default:"0" }}</div>
+                    <div class="stat-label">Cancelled</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Stage Breakdown Bar Chart -->
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header py-3">
+                <i class="bi bi-bar-chart-line me-2" style="color:var(--gold);"></i>Jobs by Stage
+            </div>
+            <div class="card-body">
+                {% if stage_counts %}
+                    {% with max_count=stage_counts|dictsort:"count"|last %}
+                    {% for stage in stage_counts %}
+                    <div class="bar-chart-row">
+                        <div class="d-flex justify-content-between">
+                            <div class="bar-chart-label">{{ stage.stage.name }}</div>
+                            <div class="bar-chart-label fw-semibold">{{ stage.count }}</div>
+                        </div>
+                        <div class="bar-chart-track">
+                            <div class="bar-chart-fill"
+                                 style="width:{% if max_count.count > 0 %}{% widthratio stage.count max_count.count 100 %}%{% else %}0%{% endif %};background:var(--gold);">
+                                {% if stage.count > 0 %}
+                                <span>{{ stage.count }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    {% endwith %}
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-bar-chart fs-2 d-block mb-2"></i>No stage data available.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Priority & Recent Activity -->
+    <div class="col-lg-5 d-flex flex-column gap-4">
+        <div class="card">
+            <div class="card-header py-3">
+                <i class="bi bi-flag me-2" style="color:var(--gold);"></i>Jobs by Priority
+            </div>
+            <div class="card-body">
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><span class="badge bg-danger me-2">Urgent</span></span>
+                        <strong>{{ priority_counts.URGENT|default:"0" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><span class="badge bg-warning text-dark me-2">High</span></span>
+                        <strong>{{ priority_counts.HIGH|default:"0" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><span class="badge bg-info text-dark me-2">Medium</span></span>
+                        <strong>{{ priority_counts.MEDIUM|default:"0" }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span><span class="badge bg-secondary me-2">Low</span></span>
+                        <strong>{{ priority_counts.LOW|default:"0" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header py-3">
+                <i class="bi bi-clock-history me-2" style="color:var(--gold);"></i>Quick Links
+            </div>
+            <div class="card-body d-flex flex-column gap-2">
+                <a href="{% url 'manufacturing:job_list' %}?status=IN_PROGRESS" class="btn btn-outline-primary btn-sm text-start">
+                    <i class="bi bi-gear-fill me-2"></i> View Active Jobs
+                </a>
+                <a href="{% url 'manufacturing:job_list' %}?priority=URGENT" class="btn btn-outline-danger btn-sm text-start">
+                    <i class="bi bi-exclamation-triangle me-2"></i> Urgent Jobs
+                </a>
+                <a href="{% url 'manufacturing:stage_dashboard' %}" class="btn btn-outline-secondary btn-sm text-start">
+                    <i class="bi bi-kanban me-2"></i> Kanban Stage Board
+                </a>
+                {% if user.role in 'admin,manager,supervisor' %}
+                <a href="{% url 'manufacturing:job_create' %}" class="btn btn-gold btn-sm text-start">
+                    <i class="bi bi-plus-lg me-2"></i> New Production Job
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

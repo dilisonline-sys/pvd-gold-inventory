@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+{% block title %}Production Report{% endblock %}
+{% block nav_prod_report %}active{% endblock %}
+{% block page_title %}Production Report{% endblock %}
+
+{% block content %}
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-3"><label class="form-label small fw-semibold">From Date</label><input type="date" name="date_from" value="{{ request.GET.date_from }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-3"><label class="form-label small fw-semibold">To Date</label><input type="date" name="date_to" value="{{ request.GET.date_to }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-2"><button type="submit" class="btn btn-primary btn-sm w-100">Apply</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ total_jobs|default:"0" }}</div><div class="stat-label">Total Jobs</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#198754;"><div class="card-body"><div class="stat-value text-success">{{ completed_jobs|default:"0" }}</div><div class="stat-label">Completed</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#0d6efd;"><div class="card-body"><div class="stat-value text-primary">{{ in_progress_jobs|default:"0" }}</div><div class="stat-label">In Progress</div></div></div></div>
+    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#dc3545;"><div class="card-body"><div class="stat-value text-danger">{{ cancelled_jobs|default:"0" }}</div><div class="stat-label">Cancelled</div></div></div></div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">Jobs by Stage</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light"><tr><th>Stage</th><th>Active</th><th>Completed</th></tr></thead>
+                        <tbody>
+                            {% for row in stage_breakdown %}
+                            <tr><td>{{ row.stage }}</td><td><span class="badge bg-primary">{{ row.active }}</span></td><td><span class="badge bg-success">{{ row.completed }}</span></td></tr>
+                            {% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No data</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">QC Summary</div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead class="table-light"><tr><th>Result</th><th>Count</th><th>%</th></tr></thead>
+                        <tbody>
+                            {% for row in qc_summary %}
+                            <tr>
+                                <td>{% if row.result == 'PASS' %}<span class="badge bg-success">Pass</span>{% elif row.result == 'FAIL' %}<span class="badge bg-danger">Fail</span>{% else %}<span class="badge bg-warning text-dark">Conditional</span>{% endif %}</td>
+                                <td>{{ row.count }}</td>
+                                <td>{{ row.pct|floatformat:1 }}%</td>
+                            </tr>
+                            {% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No QC records</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
