@@ -3,7 +3,8 @@ FROM python:3.11-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    DJANGO_SETTINGS_MODULE=goldsmith.settings
+    DJANGO_SETTINGS_MODULE=goldsmith.settings \
+    DB_PATH=/app/data/db.sqlite3
 
 WORKDIR /app
 
@@ -16,7 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/media /app/staticfiles /app/static
+# Create writable directories (data is overridden by the named volume at runtime)
+RUN mkdir -p /app/data /app/media /app/staticfiles
 
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

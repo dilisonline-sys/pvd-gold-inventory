@@ -52,10 +52,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "goldsmith.wsgi.application"
 
+import os
+
+# In Docker the database lives in /app/data/ (a named volume directory).
+# Locally it stays at the project root as db.sqlite3.
+_DB_PATH = os.environ.get("DB_PATH", str(BASE_DIR / "db.sqlite3"))
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "NAME": _DB_PATH,
     }
 }
 
