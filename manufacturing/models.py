@@ -480,3 +480,76 @@ class QualityCheck(models.Model):
             f'QC {self.process_record} – {self.get_result_display()} '
             f'({self.checked_at:%Y-%m-%d})'
         )
+
+
+# ---------------------------------------------------------------------------
+# FinalProduct
+# ---------------------------------------------------------------------------
+
+FINISH_POLISHED = 'POLISHED'
+FINISH_MATTE = 'MATTE'
+FINISH_BRUSHED = 'BRUSHED'
+FINISH_HAMMERED = 'HAMMERED'
+FINISH_SANDBLAST = 'SANDBLAST'
+FINISH_OTHER = 'OTHER'
+
+PRODUCT_FINISH_CHOICES = [
+    (FINISH_POLISHED, 'High Polish'),
+    (FINISH_MATTE, 'Matte'),
+    (FINISH_BRUSHED, 'Brushed'),
+    (FINISH_HAMMERED, 'Hammered'),
+    (FINISH_SANDBLAST, 'Sandblast'),
+    (FINISH_OTHER, 'Other'),
+]
+
+
+class FinalProduct(models.Model):
+    """Records the finished product details and photo after the job completes all stages."""
+
+    production_job = models.OneToOneField(
+        ProductionJob,
+        on_delete=models.CASCADE,
+        related_name='final_product',
+        verbose_name='Production Job',
+    )
+    name = models.CharField(max_length=200, verbose_name='Product Name')
+    description = models.TextField(blank=True, verbose_name='Description')
+    metal_type = models.CharField(max_length=100, blank=True, verbose_name='Metal Type')
+    purity = models.CharField(max_length=20, blank=True, verbose_name='Purity / Karat')
+    final_weight = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        null=True,
+        blank=True,
+        verbose_name='Final Weight (g)',
+    )
+    finish = models.CharField(
+        max_length=20,
+        choices=PRODUCT_FINISH_CHOICES,
+        default=FINISH_POLISHED,
+        verbose_name='Surface Finish',
+    )
+    stone_details = models.TextField(blank=True, verbose_name='Stone / Gem Details')
+    hallmark = models.CharField(max_length=100, blank=True, verbose_name='Hallmark / Stamp')
+    image = models.ImageField(
+        upload_to='final_products/',
+        null=True,
+        blank=True,
+        verbose_name='Product Photo',
+    )
+    notes = models.TextField(blank=True, verbose_name='Additional Notes')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Recorded At')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='final_products_recorded',
+        verbose_name='Recorded By',
+    )
+
+    class Meta:
+        verbose_name = 'Final Product'
+        verbose_name_plural = 'Final Products'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.production_job.job_number} – {self.name}'

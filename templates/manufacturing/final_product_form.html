@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Final Product — {{ job.job_number }}{% endblock %}
+{% block nav_production %}active{% endblock %}
+{% block page_title %}Final Product — {{ job.job_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card mb-4" style="border-left:4px solid var(--gold);">
+            <div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <span class="fw-bold" style="color:var(--gold-dark);">{{ job.job_number }}</span>
+                    <span class="text-muted mx-2">|</span>
+                    <span class="text-muted small">{{ job.title }}</span>
+                </div>
+                <a href="{% url 'manufacturing:job_detail' job.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i> Back to Job
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header py-3">
+                <i class="bi bi-gem me-2" style="color:var(--gold);"></i>
+                {% if existing %}Update{% else %}Record{% endif %} Final Product
+            </div>
+            <div class="card-body p-4">
+                <form method="post" enctype="multipart/form-data" novalidate>
+                    {% csrf_token %}
+                    <div class="row g-3">
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors|join:", " }}</div>{% endif %}
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Metal Type</label>
+                            {{ form.metal_type }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Purity / Karat</label>
+                            {{ form.purity }}
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Final Weight (g)</label>
+                            {{ form.final_weight }}
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Surface Finish</label>
+                            {{ form.finish }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hallmark / Stamp</label>
+                            {{ form.hallmark }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Stone / Gem Details</label>
+                            {{ form.stone_details }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Description</label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Product Photo</label>
+                            {% if existing and existing.image %}
+                            <div class="mb-2">
+                                <img src="{{ existing.image.url }}" alt="Current product photo"
+                                     class="img-thumbnail" style="max-height:160px;">
+                                <div class="text-muted small mt-1">Current photo. Upload a new one to replace it.</div>
+                            </div>
+                            {% endif %}
+                            {{ form.image }}
+                            <div class="form-text">Accepted: JPG, PNG, WEBP. Max recommended size: 5 MB.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Additional Notes</label>
+                            {{ form.notes }}
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-gold">
+                            <i class="bi bi-check-lg me-1"></i>
+                            {% if existing %}Update Final Product{% else %}Save Final Product{% endif %}
+                        </button>
+                        <a href="{% url 'manufacturing:job_detail' job.pk %}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

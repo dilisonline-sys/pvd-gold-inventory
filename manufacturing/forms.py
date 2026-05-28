@@ -2,11 +2,12 @@ from django import forms
 from django.contrib.auth import get_user_model
 
 from .models import (
-    ProductionJob,
-    ProcessRecord,
+    FinalProduct,
     MaterialIssuance,
-    QualityCheck,
+    ProcessRecord,
     ProcessStage,
+    ProductionJob,
+    QualityCheck,
 )
 
 User = get_user_model()
@@ -180,3 +181,29 @@ class StageAdvanceForm(forms.Form):
         required=True,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
+
+
+class FinalProductForm(forms.ModelForm):
+    """Record the finished product details and photo for a completed job."""
+
+    class Meta:
+        model = FinalProduct
+        fields = [
+            'name', 'description', 'metal_type', 'purity',
+            'final_weight', 'finish', 'stone_details', 'hallmark',
+            'image', 'notes',
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'metal_type': forms.TextInput(attrs={'class': 'form-control'}),
+            'purity': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 18K, 22K, 925'}),
+            'final_weight': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'finish': forms.Select(attrs={'class': 'form-select'}),
+            'stone_details': forms.Textarea(attrs={'class': 'form-control', 'rows': 2,
+                                                   'placeholder': 'e.g. 1ct round diamond centre, 8 baguette accents'}),
+            'hallmark': forms.TextInput(attrs={'class': 'form-control',
+                                               'placeholder': 'e.g. 750, 916, PVD stamp'}),
+            'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }

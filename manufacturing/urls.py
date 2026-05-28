@@ -24,4 +24,7 @@ urlpatterns = [
 
     # Quality checks
     path('process-records/<int:record_pk>/quality-check/', views.quality_check_create, name='quality_check_create'),
+
+    # Final product
+    path('jobs/<int:pk>/final-product/', views.final_product_create, name='final_product_create'),
 ]

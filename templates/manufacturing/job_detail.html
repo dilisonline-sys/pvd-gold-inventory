@@ -7,16 +7,18 @@
 <!-- Top Action Bar -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <div class="d-flex gap-2 flex-wrap">
-        {% if user.role in 'admin,manager,supervisor' %}
+        {% if can_manage %}
         <a href="{% url 'manufacturing:job_edit' job.pk %}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-pencil me-1"></i> Edit Job
         </a>
         {% endif %}
         {% if job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
-        {% if user.role in 'admin,manager,supervisor' %}
+        {% if can_update %}
         <a href="{% url 'manufacturing:update_stage' job.pk %}" class="btn btn-gold btn-sm">
             <i class="bi bi-arrow-right-circle me-1"></i> Update Stage
         </a>
+        {% endif %}
+        {% if can_manage %}
         <a href="{% url 'manufacturing:issue_materials' job.pk %}" class="btn btn-outline-success btn-sm">
             <i class="bi bi-box-arrow-in-right me-1"></i> Issue Materials
         </a>
@@ -24,6 +26,12 @@
             <i class="bi bi-patch-check me-1"></i> QC Check
         </a>
         {% endif %}
+        {% endif %}
+        {% if can_manage %}
+        <a href="{% url 'manufacturing:final_product_create' job.pk %}" class="btn btn-outline-warning btn-sm">
+            <i class="bi bi-gem me-1"></i>
+            {% if job.final_product %}Edit Final Product{% else %}Record Final Product{% endif %}
+        </a>
         {% endif %}
     </div>
     <a href="{% url 'manufacturing:job_list' %}" class="btn btn-outline-secondary btn-sm">
@@ -47,6 +55,10 @@
                 <div class="mb-3">
                     <div class="text-muted small mb-1">Job Number</div>
                     <div class="fw-bold fs-5" style="color:var(--gold-dark);">{{ job.job_number }}</div>
+                </div>
+                <div class="mb-3">
+                    <div class="text-muted small mb-1">Title</div>
+                    <div class="fw-semibold">{{ job.title }}</div>
                 </div>
                 <div class="mb-3">
                     <div class="text-muted small mb-1">Status</div>
@@ -76,41 +88,47 @@
                 </div>
                 <div class="mb-3">
                     <div class="text-muted small mb-1">Current Stage</div>
-                    <span class="badge badge-stage fs-6">{{ job.current_stage_display|default:job.current_stage|default:"—" }}</span>
+                    <span class="badge badge-stage fs-6">{{ job.current_stage.name }}</span>
                 </div>
-                {% if job.order %}
+                {% if job.job_order %}
                 <div class="mb-3">
                     <div class="text-muted small mb-1">Order</div>
-                    <a href="{% url 'orders:order_detail' job.order.pk %}" class="fw-semibold text-decoration-none" style="color:var(--gold-dark);">
-                        {{ job.order.order_number }}
+                    <a href="{% url 'orders:order_detail' job.job_order.pk %}" class="fw-semibold text-decoration-none" style="color:var(--gold-dark);">
+                        {{ job.job_order.order_number }}
                     </a>
                 </div>
                 {% endif %}
                 <div class="mb-3">
-                    <div class="text-muted small mb-1">Assigned To</div>
-                    <div class="fw-semibold">{{ job.assigned_to.get_full_name|default:"—" }}</div>
+                    <div class="text-muted small mb-1">Created By</div>
+                    <div class="fw-semibold">{{ job.created_by.get_full_name|default:job.created_by.username }}</div>
                 </div>
                 <div class="mb-3">
-                    <div class="text-muted small mb-1">Due Date</div>
-                    <div class="fw-semibold">{{ job.due_date|date:"d M Y"|default:"—" }}</div>
+                    <div class="text-muted small mb-1">Created At</div>
+                    <div class="fw-semibold">{{ job.created_at|date:"d M Y, H:i" }}</div>
                 </div>
-                {% if job.description %}
+                {% if job.target_completion_date %}
                 <div class="mb-3">
-                    <div class="text-muted small mb-1">Description</div>
-                    <div class="small">{{ job.description }}</div>
+                    <div class="text-muted small mb-1">Target Completion</div>
+                    <div class="fw-semibold">{{ job.target_completion_date|date:"d M Y" }}</div>
                 </div>
                 {% endif %}
-                {% if job.notes %}
+                {% if job.actual_completion_date %}
+                <div class="mb-3">
+                    <div class="text-muted small mb-1">Completed On</div>
+                    <div class="fw-semibold text-success">{{ job.actual_completion_date|date:"d M Y" }}</div>
+                </div>
+                {% endif %}
+                {% if job.description %}
                 <div>
-                    <div class="text-muted small mb-1">Notes</div>
-                    <div class="small">{{ job.notes }}</div>
+                    <div class="text-muted small mb-1">Description</div>
+                    <div class="small">{{ job.description }}</div>
                 </div>
                 {% endif %}
             </div>
         </div>
 
         <!-- Materials Issued -->
-        <div class="card">
+        <div class="card mb-4">
             <div class="card-header py-3">
                 <i class="bi bi-box-arrow-in-right me-2" style="color:var(--gold);"></i>Materials Issued
             </div>
@@ -120,82 +138,197 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Material</th>
-                                <th>Qty</th>
+                                <th>Issued</th>
                                 <th>Stage</th>
+                                <th>Date</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {% for mi in material_issuances %}
+                            {% for mi in issuances %}
                             <tr>
                                 <td class="small fw-semibold">{{ mi.material.name }}</td>
-                                <td class="small">{{ mi.quantity|floatformat:3 }} {{ mi.material.unit }}</td>
-                                <td class="small text-muted">{{ mi.stage_display|default:mi.stage }}</td>
+                                <td class="small">{{ mi.quantity_issued|floatformat:3 }} {{ mi.material.unit }}</td>
+                                <td class="small text-muted">{{ mi.stage.name }}</td>
+                                <td class="small text-muted text-nowrap">{{ mi.issued_at|date:"d M Y" }}</td>
                             </tr>
                             {% empty %}
-                            <tr><td colspan="3" class="text-center text-muted small py-3">No materials issued.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted small py-3">No materials issued.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
+
+        <!-- Final Product Card -->
+        {% if job.final_product %}
+        <div class="card" style="border-top:3px solid var(--gold);">
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-gem me-2" style="color:var(--gold);"></i>Final Product</span>
+                {% if can_manage %}
+                <a href="{% url 'manufacturing:final_product_create' job.pk %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if job.final_product.image %}
+                <div class="text-center mb-3">
+                    <img src="{{ job.final_product.image.url }}" alt="{{ job.final_product.name }}"
+                         class="img-fluid rounded shadow-sm" style="max-height:220px; object-fit:cover;">
+                </div>
+                {% endif %}
+                <h6 class="fw-bold" style="color:var(--gold-dark);">{{ job.final_product.name }}</h6>
+                <div class="row g-2 small mt-1">
+                    {% if job.final_product.metal_type %}
+                    <div class="col-6">
+                        <div class="text-muted">Metal</div>
+                        <div class="fw-semibold">{{ job.final_product.metal_type }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.final_product.purity %}
+                    <div class="col-6">
+                        <div class="text-muted">Purity</div>
+                        <div class="fw-semibold">{{ job.final_product.purity }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.final_product.final_weight %}
+                    <div class="col-6">
+                        <div class="text-muted">Final Weight</div>
+                        <div class="fw-semibold">{{ job.final_product.final_weight|floatformat:3 }} g</div>
+                    </div>
+                    {% endif %}
+                    <div class="col-6">
+                        <div class="text-muted">Finish</div>
+                        <div class="fw-semibold">{{ job.final_product.get_finish_display }}</div>
+                    </div>
+                    {% if job.final_product.hallmark %}
+                    <div class="col-6">
+                        <div class="text-muted">Hallmark</div>
+                        <div class="fw-semibold">{{ job.final_product.hallmark }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.final_product.stone_details %}
+                    <div class="col-12">
+                        <div class="text-muted">Stones</div>
+                        <div>{{ job.final_product.stone_details }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.final_product.description %}
+                    <div class="col-12">
+                        <div class="text-muted">Description</div>
+                        <div>{{ job.final_product.description }}</div>
+                    </div>
+                    {% endif %}
+                    {% if job.final_product.notes %}
+                    <div class="col-12">
+                        <div class="text-muted">Notes</div>
+                        <div>{{ job.final_product.notes }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="text-muted mt-2" style="font-size:0.75rem;">
+                    Recorded {{ job.final_product.created_at|date:"d M Y, H:i" }}
+                    by {{ job.final_product.created_by.get_full_name|default:job.final_product.created_by.username }}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        {% if can_manage %}
+        <div class="card border-dashed text-center" style="border:2px dashed #dee2e6;">
+            <div class="card-body py-4">
+                <i class="bi bi-gem fs-2 d-block mb-2 text-muted"></i>
+                <div class="text-muted small mb-3">No final product recorded yet.</div>
+                <a href="{% url 'manufacturing:final_product_create' job.pk %}" class="btn btn-gold btn-sm">
+                    <i class="bi bi-plus-lg me-1"></i> Record Final Product
+                </a>
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
     </div>
 
-    <!-- Stage Timeline + Process Records -->
+    <!-- Stage Timeline + Process Records + QC -->
     <div class="col-lg-8">
         <!-- Stage Timeline -->
         <div class="card mb-4">
-            <div class="card-header py-3">
-                <i class="bi bi-diagram-3 me-2" style="color:var(--gold);"></i>Stage Timeline
+            <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-diagram-3 me-2" style="color:var(--gold);"></i>Stage Timeline</span>
+                {% if can_manage and job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
+                <form method="post" action="{% url 'manufacturing:update_stage' job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="advance">
+                    <input type="hidden" name="confirm" value="true">
+                    <button type="submit" class="btn btn-sm btn-outline-primary"
+                            onclick="return confirm('Advance to next stage?')">
+                        <i class="bi bi-skip-forward me-1"></i> Advance Stage
+                    </button>
+                </form>
+                {% endif %}
             </div>
             <div class="card-body">
                 <div class="stage-timeline">
-                    {% for stage in stages %}
+                    {% for item in timeline %}
                     <div class="stage-step">
                         <div class="d-flex flex-column align-items-center me-3">
                             <div class="stage-step-icon
-                                {% if stage.status == 'completed' %}completed
-                                {% elif stage.status == 'active' %}active
-                                {% elif stage.status == 'failed' %}failed
+                                {% if item.is_completed %}completed
+                                {% elif item.is_current %}active
+                                {% elif item.record and item.record.status == 'FAILED' %}failed
                                 {% else %}pending{% endif %}
                             ">
-                                {% if stage.status == 'completed' %}
+                                {% if item.is_completed %}
                                     <i class="bi bi-check-lg"></i>
-                                {% elif stage.status == 'active' %}
+                                {% elif item.is_current %}
                                     <i class="bi bi-gear-fill"></i>
-                                {% elif stage.status == 'failed' %}
+                                {% elif item.record and item.record.status == 'FAILED' %}
                                     <i class="bi bi-x-lg"></i>
+                                {% elif item.record and item.record.status == 'SKIPPED' %}
+                                    <i class="bi bi-skip-forward"></i>
                                 {% else %}
                                     <i class="bi bi-circle"></i>
                                 {% endif %}
                             </div>
                             {% if not forloop.last %}
-                            <div class="stage-connector {% if stage.status == 'completed' %}completed{% endif %}"></div>
+                            <div class="stage-connector {% if item.is_completed %}completed{% endif %}"></div>
                             {% endif %}
                         </div>
                         <div class="flex-grow-1 pb-2">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
-                                    <div class="fw-semibold small">{{ stage.label|default:stage.name }}</div>
-                                    {% if stage.started_at %}
-                                    <div class="text-muted" style="font-size:0.75rem;">Started: {{ stage.started_at|date:"d M Y, H:i" }}</div>
+                                    <div class="fw-semibold small">{{ item.stage.name }}</div>
+                                    {% if item.record and item.record.started_at %}
+                                    <div class="text-muted" style="font-size:0.75rem;">
+                                        <i class="bi bi-play-circle me-1"></i>Started: {{ item.record.started_at|date:"d M Y, H:i" }}
+                                    </div>
                                     {% endif %}
-                                    {% if stage.completed_at %}
-                                    <div class="text-muted" style="font-size:0.75rem;">Completed: {{ stage.completed_at|date:"d M Y, H:i" }}</div>
+                                    {% if item.record and item.record.completed_at %}
+                                    <div class="text-muted" style="font-size:0.75rem;">
+                                        <i class="bi bi-check-circle me-1"></i>Completed: {{ item.record.completed_at|date:"d M Y, H:i" }}
+                                    </div>
+                                    {% endif %}
+                                    {% if item.record and item.record.assigned_to %}
+                                    <div class="text-muted" style="font-size:0.75rem;">
+                                        <i class="bi bi-person me-1"></i>{{ item.record.assigned_to.get_full_name|default:item.record.assigned_to.username }}
+                                    </div>
+                                    {% endif %}
+                                    {% if item.record and item.record.notes %}
+                                    <div class="text-muted small mt-1">{{ item.record.notes }}</div>
                                     {% endif %}
                                 </div>
-                                <span class="badge
-                                    {% if stage.status == 'completed' %}bg-success
-                                    {% elif stage.status == 'active' %}bg-warning text-dark
-                                    {% elif stage.status == 'failed' %}bg-danger
+                                <span class="badge ms-2
+                                    {% if item.is_completed %}bg-success
+                                    {% elif item.is_current %}bg-warning text-dark
+                                    {% elif item.record and item.record.status == 'FAILED' %}bg-danger
+                                    {% elif item.record and item.record.status == 'SKIPPED' %}bg-secondary
                                     {% else %}bg-light text-muted{% endif %}
-                                " style="font-size:0.7rem;">
-                                    {{ stage.status|title }}
+                                " style="font-size:0.7rem; white-space:nowrap;">
+                                    {% if item.is_completed %}Done
+                                    {% elif item.is_current %}Current
+                                    {% elif item.record %}{{ item.record.get_status_display }}
+                                    {% else %}Pending{% endif %}
                                 </span>
                             </div>
-                            {% if stage.notes %}
-                            <div class="text-muted small mt-1">{{ stage.notes }}</div>
-                            {% endif %}
                         </div>
                     </div>
                     {% empty %}
@@ -209,6 +342,7 @@
         <div class="card mb-4">
             <div class="card-header py-3">
                 <i class="bi bi-clipboard-data me-2" style="color:var(--gold);"></i>Process Records
+                <span class="text-muted small fw-normal ms-2">(ordered by most recent)</span>
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
@@ -216,10 +350,10 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Stage</th>
-                                <th>Started</th>
-                                <th>Completed</th>
-                                <th>Weight In (g)</th>
-                                <th>Weight Out (g)</th>
+                                <th class="text-nowrap">Started</th>
+                                <th class="text-nowrap">Completed</th>
+                                <th>Wt In (g)</th>
+                                <th>Wt Out (g)</th>
                                 <th>Loss (g)</th>
                                 <th>Worker</th>
                                 <th>Status</th>
@@ -229,29 +363,35 @@
                         <tbody>
                             {% for rec in process_records %}
                             <tr>
-                                <td><span class="badge badge-stage">{{ rec.stage_display|default:rec.stage }}</span></td>
-                                <td class="text-muted text-nowrap small">{{ rec.started_at|date:"d M Y, H:i"|default:"—" }}</td>
-                                <td class="text-muted text-nowrap small">{{ rec.completed_at|date:"d M Y, H:i"|default:"—" }}</td>
+                                <td><span class="badge badge-stage">{{ rec.stage.name }}</span></td>
+                                <td class="text-muted text-nowrap">
+                                    {% if rec.started_at %}{{ rec.started_at|date:"d M Y, H:i" }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-muted text-nowrap">
+                                    {% if rec.completed_at %}{{ rec.completed_at|date:"d M Y, H:i" }}{% else %}—{% endif %}
+                                </td>
                                 <td>{{ rec.weight_in|floatformat:3|default:"—" }}</td>
                                 <td>{{ rec.weight_out|floatformat:3|default:"—" }}</td>
                                 <td>
                                     {% if rec.weight_in and rec.weight_out %}
-                                        <span class="text-danger">{{ rec.weight_in|floatformat:3|add:"-"|add:rec.weight_out|floatformat:3 }}</span>
+                                        <span class="text-danger fw-semibold">{{ rec.weight_loss|floatformat:3 }}</span>
                                     {% else %}—{% endif %}
                                 </td>
-                                <td>{{ rec.worker.get_full_name|default:"—" }}</td>
+                                <td>{{ rec.assigned_to.get_full_name|default:"—" }}</td>
                                 <td>
-                                    {% if rec.status == 'COMPLETED' or rec.status == 'completed' %}
+                                    {% if rec.status == 'COMPLETED' %}
                                         <span class="badge bg-success">Done</span>
-                                    {% elif rec.status == 'IN_PROGRESS' or rec.status == 'in_progress' %}
+                                    {% elif rec.status == 'IN_PROGRESS' %}
                                         <span class="badge bg-primary">Active</span>
-                                    {% elif rec.status == 'FAILED' or rec.status == 'failed' %}
+                                    {% elif rec.status == 'FAILED' %}
                                         <span class="badge bg-danger">Failed</span>
+                                    {% elif rec.status == 'SKIPPED' %}
+                                        <span class="badge bg-secondary">Skipped</span>
                                     {% else %}
                                         <span class="badge bg-secondary">Pending</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-muted text-truncate" style="max-width:150px;">{{ rec.notes|default:"—" }}</td>
+                                <td class="text-muted text-truncate" style="max-width:140px;">{{ rec.notes|default:"—" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -268,7 +408,7 @@
         <div class="card">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-patch-check me-2" style="color:var(--gold);"></i>Quality Control Records</span>
-                {% if user.role in 'admin,manager,supervisor' and job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
+                {% if can_manage and job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
                 <a href="{% url 'manufacturing:quality_check_create' job.pk %}" class="btn btn-sm btn-outline-info">
                     <i class="bi bi-plus-lg me-1"></i> Add QC
                 </a>
@@ -282,30 +422,32 @@
                                 <th>Stage</th>
                                 <th>Checked By</th>
                                 <th>Result</th>
-                                <th>Notes</th>
-                                <th>Date</th>
+                                <th>Finish Grade</th>
+                                <th>Defects</th>
+                                <th class="text-nowrap">Checked At</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for qc in qc_records %}
                             <tr>
-                                <td><span class="badge badge-stage">{{ qc.stage_display|default:qc.stage }}</span></td>
+                                <td><span class="badge badge-stage">{{ qc.process_record.stage.name }}</span></td>
                                 <td>{{ qc.checked_by.get_full_name|default:"—" }}</td>
                                 <td>
-                                    {% if qc.result == 'PASS' or qc.passed %}
+                                    {% if qc.result == 'PASS' %}
                                         <span class="badge bg-success"><i class="bi bi-check-lg"></i> Pass</span>
-                                    {% elif qc.result == 'FAIL' or qc.failed %}
+                                    {% elif qc.result == 'FAIL' %}
                                         <span class="badge bg-danger"><i class="bi bi-x-lg"></i> Fail</span>
                                     {% else %}
-                                        <span class="badge bg-warning text-dark">{{ qc.result|default:"Pending" }}</span>
+                                        <span class="badge bg-warning text-dark">{{ qc.get_result_display }}</span>
                                     {% endif %}
                                 </td>
-                                <td class="text-muted text-truncate" style="max-width:200px;">{{ qc.notes|default:"—" }}</td>
+                                <td>{{ qc.get_finish_grade_display|default:"—" }}</td>
+                                <td class="text-muted text-truncate" style="max-width:180px;">{{ qc.defects_found|default:"—" }}</td>
                                 <td class="text-muted text-nowrap">{{ qc.checked_at|date:"d M Y, H:i" }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="5" class="text-center text-muted py-4">No QC records yet.</td>
+                                <td colspan="6" class="text-center text-muted py-4">No QC records yet.</td>
                             </tr>
                             {% endfor %}
                         </tbody>

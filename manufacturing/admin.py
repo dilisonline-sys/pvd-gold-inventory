@@ -1,6 +1,7 @@
 from django.contrib import admin
 
 from .models import (
+    FinalProduct,
     MaterialIssuance,
     ProcessRecord,
     ProcessStage,
@@ -171,3 +172,11 @@ class QualityCheckAdmin(admin.ModelAdmin):
     readonly_fields = ('checked_at',)
     date_hierarchy = 'checked_at'
     ordering = ('-checked_at',)
+
+
+@admin.register(FinalProduct)
+class FinalProductAdmin(admin.ModelAdmin):
+    list_display = ('production_job', 'name', 'metal_type', 'purity', 'final_weight', 'finish', 'created_at')
+    list_filter = ('finish', 'metal_type')
+    search_fields = ('production_job__job_number', 'name', 'hallmark')
+    readonly_fields = ('created_at', 'created_by')

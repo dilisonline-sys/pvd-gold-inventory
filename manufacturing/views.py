@@ -16,6 +16,7 @@ from accounts.models import (
 )
 
 from .forms import (
+    FinalProductForm,
     MaterialIssuanceForm,
     ProcessRecordForm,
     ProductionJobForm,
@@ -23,6 +24,7 @@ from .forms import (
     StageAdvanceForm,
 )
 from .models import (
+    FinalProduct,
     JOB_STATUS_CHOICES,
     PRIORITY_CHOICES,
     RECORD_STATUS_IN_PROGRESS,
@@ -243,8 +245,15 @@ def job_detail(request, pk):
     process_records = (
         job.process_records
         .select_related('stage', 'assigned_to')
-        .prefetch_related('quality_checks__checked_by', 'quality_checks__approved_by')
         .order_by('stage__order_number')
+    )
+
+    # All QC records for this job
+    qc_records = (
+        QualityCheck.objects
+        .filter(process_record__production_job=job)
+        .select_related('checked_by', 'approved_by', 'process_record__stage')
+        .order_by('-checked_at')
     )
 
     # Materials issued for this job
@@ -284,6 +293,7 @@ def job_detail(request, pk):
     context = {
         'job': job,
         'process_records': process_records,
+        'qc_records': qc_records,
         'issuances': issuances,
         'current_record': current_record,
         'timeline': timeline,
@@ -360,8 +370,9 @@ def update_stage(request, pk):
     action = request.POST.get('action', 'update')
 
     if action == 'advance':
-        advance_form = StageAdvanceForm(request.POST)
-        if advance_form.is_valid():
+        # Direct confirm via button (hidden confirm=true) bypasses the checkbox form
+        confirmed = request.POST.get('confirm') in ('true', 'on', '1')
+        if confirmed:
             with transaction.atomic():
                 # Mark current record completed if not already
                 if current_record.status not in ('COMPLETED', 'SKIPPED'):
@@ -387,7 +398,7 @@ def update_stage(request, pk):
                         f'Job {job.job_number} advanced to stage: {next_stage.name}.',
                     )
         else:
-            messages.error(request, 'Please correct the errors in the advance form.')
+            messages.error(request, 'Advance action requires confirmation.')
 
     else:  # action == 'update'
         record_form = ProcessRecordForm(request.POST, instance=current_record)
@@ -482,3 +493,35 @@ def quality_check_create(request, record_pk):
         'job': job,
     }
     return render(request, 'manufacturing/quality_check_form.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Final Product
+# ---------------------------------------------------------------------------
+
+@login_required
+@supervisor_or_above
+def final_product_create(request, pk):
+    """Record or update the final product details and photo for a job."""
+    job = get_object_or_404(ProductionJob, pk=pk)
+
+    # Use existing record if it exists (edit in place)
+    instance = getattr(job, 'final_product', None)
+
+    if request.method == 'POST':
+        form = FinalProductForm(request.POST, request.FILES, instance=instance)
+        if form.is_valid():
+            fp = form.save(commit=False)
+            fp.production_job = job
+            fp.created_by = request.user
+            fp.save()
+            messages.success(request, f'Final product recorded for {job.job_number}.')
+            return redirect('manufacturing:job_detail', pk=job.pk)
+    else:
+        form = FinalProductForm(instance=instance)
+
+    return render(request, 'manufacturing/final_product_form.html', {
+        'form': form,
+        'job': job,
+        'existing': instance,
+    })
