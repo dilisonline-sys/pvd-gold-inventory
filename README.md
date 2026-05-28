@@ -1,6 +1,6 @@
 # PVD Goldsmith Manufacturing System
 
-**Version: v1.2**
+**Version: v1.3**
 
 A complete web-based manufacturing management system for goldsmith jewelry companies. Tracks every step of the jewelry production process — from customer order and design through casting, polishing, stone setting, quality control, and final delivery.
 
@@ -93,6 +93,16 @@ Data is stored in named Docker volumes (`db_data`, `media_data`) and persists be
 ```bash
 docker compose down -v   # removes volumes too
 ```
+
+### Updating to a new version
+
+```bash
+git pull
+docker compose down
+docker compose up --build
+```
+
+> Always use `--build` after a `git pull` so Docker rebuilds the image with the latest code.
 
 ---
 

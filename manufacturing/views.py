@@ -341,11 +341,12 @@ def job_edit(request, pk):
 
 @login_required
 def update_stage(request, pk):
-    """Update the current stage's process record; optionally advance to next stage.
+    """Show and process the stage update form.
 
+    GET  – render update_stage.html with the current record pre-filled.
+    POST – process the update or advance action.
     Production workers may only update stages assigned to them.
     Supervisors and above may update any stage.
-    POST-only view.
     """
     job = get_object_or_404(
         ProductionJob.objects.select_related('current_stage'),
@@ -357,24 +358,27 @@ def update_stage(request, pk):
     current_record = _get_or_create_process_record(job, job.current_stage)
 
     if not is_supervisor:
-        # Production workers can only update if the record is assigned to them
         if current_record.assigned_to != request.user:
             return HttpResponseForbidden(
                 '<h1>403 Forbidden</h1>'
                 '<p>You are not assigned to this stage.</p>'
             )
 
-    if request.method != 'POST':
-        return redirect('manufacturing:job_detail', pk=job.pk)
+    if request.method == 'GET':
+        form = ProcessRecordForm(instance=current_record)
+        return render(request, 'manufacturing/update_stage.html', {
+            'form': form,
+            'job': job,
+            'current_record': current_record,
+        })
 
+    # POST handling
     action = request.POST.get('action', 'update')
 
     if action == 'advance':
-        # Direct confirm via button (hidden confirm=true) bypasses the checkbox form
         confirmed = request.POST.get('confirm') in ('true', 'on', '1')
         if confirmed:
             with transaction.atomic():
-                # Mark current record completed if not already
                 if current_record.status not in ('COMPLETED', 'SKIPPED'):
                     current_record.status = 'COMPLETED'
                     current_record.completed_at = timezone.now()
@@ -382,7 +386,6 @@ def update_stage(request, pk):
 
                 next_stage = job.advance_to_next_stage()
                 if next_stage is None:
-                    # Already at last stage
                     job.status = STATUS_COMPLETED
                     job.actual_completion_date = timezone.now().date()
                     job.save(update_fields=['status', 'actual_completion_date', 'updated_at'])
@@ -391,7 +394,6 @@ def update_stage(request, pk):
                         f'Job {job.job_number} has completed all stages and is now marked COMPLETED.',
                     )
                 else:
-                    # Create ProcessRecord for next stage
                     _get_or_create_process_record(job, next_stage)
                     messages.success(
                         request,
@@ -404,17 +406,12 @@ def update_stage(request, pk):
         record_form = ProcessRecordForm(request.POST, instance=current_record)
         if record_form.is_valid():
             record = record_form.save(commit=False)
-            # Auto-set started_at when moving to IN_PROGRESS
             if record.status == RECORD_STATUS_IN_PROGRESS and not record.started_at:
                 record.started_at = timezone.now()
-            # Auto-set completed_at when completing
             if record.status == 'COMPLETED' and not record.completed_at:
                 record.completed_at = timezone.now()
             record.save()
-            messages.success(
-                request,
-                f'Stage record for "{job.current_stage.name}" updated.',
-            )
+            messages.success(request, f'Stage record for "{job.current_stage.name}" updated.')
         else:
             messages.error(request, 'Please correct the errors in the update form.')
 
