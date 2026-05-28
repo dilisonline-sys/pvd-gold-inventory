@@ -27,4 +27,5 @@ urlpatterns = [
 
     # Final product
     path('jobs/<int:pk>/final-product/', views.final_product_create, name='final_product_create'),
+    path('final-products/', views.final_product_inventory, name='final_product_inventory'),
 ]

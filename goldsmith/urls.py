@@ -19,4 +19,5 @@ urlpatterns = [
     path("", RedirectView.as_view(url="/dashboard/", permanent=False), name="home"),
     path("dashboard/", include("manufacturing.dashboard_urls")),
     path("help/", login_required(help_view), name="help"),
+    path("catalog/", include("catalog.urls", namespace="catalog")),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

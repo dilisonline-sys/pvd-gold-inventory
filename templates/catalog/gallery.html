@@ -1,0 +1,120 @@
+{% extends "catalog/base.html" %}
+{% block title %}Product Gallery{% endblock %}
+
+{% block nav_extra %}
+<span class="text-muted small">{{ total }} product{{ total|pluralize }}</span>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-3">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:#1a1a2e;">
+            <i class="bi bi-gem me-2" style="color:var(--gold);"></i>Finished Products
+        </h4>
+        <div class="text-muted small">Browse our completed jewelry collection</div>
+    </div>
+</div>
+
+<!-- Filters -->
+<form method="get" class="mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-md-4">
+            <input type="text" name="q" value="{{ filter_search }}" class="form-control"
+                   placeholder="Search by name or job number…">
+        </div>
+        <div class="col-md-3">
+            <input type="text" name="metal" value="{{ filter_metal }}" class="form-control"
+                   placeholder="Metal type (e.g. Gold, Silver)">
+        </div>
+        <div class="col-md-3">
+            <select name="finish" class="form-select">
+                <option value="">All Finishes</option>
+                {% for val, label in finish_choices %}
+                <option value="{{ val }}" {% if filter_finish == val %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2 d-flex gap-2">
+            <button type="submit" class="btn btn-gold flex-fill">
+                <i class="bi bi-search"></i>
+            </button>
+            {% if filter_search or filter_metal or filter_finish %}
+            <a href="{% url 'catalog:gallery' %}" class="btn btn-outline-secondary flex-fill">
+                <i class="bi bi-x-lg"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</form>
+
+<!-- Grid -->
+{% if products %}
+<div class="row row-cols-2 row-cols-sm-2 row-cols-md-3 row-cols-xl-4 g-4">
+    {% for product in products %}
+    <div class="col">
+        <a href="{% url 'catalog:product' product.pk %}" class="product-card">
+            <div class="card-img-wrap">
+                {% if product.image %}
+                <img src="{{ product.image.url }}" alt="{{ product.name }}" loading="lazy">
+                {% else %}
+                <i class="bi bi-gem no-img" style="font-size:4rem;"></i>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="product-name">{{ product.name }}</div>
+                <div class="product-meta mb-2">{{ product.production_job.job_number }}</div>
+                {% if product.metal_type %}
+                <span class="product-tag"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>{{ product.metal_type }}{% if product.purity %} {{ product.purity }}{% endif %}</span>
+                {% endif %}
+                {% if product.final_weight %}
+                <span class="product-tag">{{ product.final_weight|floatformat:2 }}g</span>
+                {% endif %}
+                <span class="product-tag">{{ product.get_finish_display }}</span>
+            </div>
+        </a>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="mt-5 d-flex justify-content-center">
+    <ul class="pagination">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ filter_search }}&metal={{ filter_metal }}&finish={{ filter_finish }}">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+        </li>
+        {% endif %}
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}&q={{ filter_search }}&metal={{ filter_metal }}&finish={{ filter_finish }}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ filter_search }}&metal={{ filter_metal }}&finish={{ filter_finish }}">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="text-center py-5">
+    <i class="bi bi-gem text-muted" style="font-size:4rem; opacity:0.3;"></i>
+    <p class="text-muted mt-3">
+        {% if filter_search or filter_metal or filter_finish %}
+        No products match your filters.
+        <a href="{% url 'catalog:gallery' %}">Clear filters</a>
+        {% else %}
+        No finished products have been recorded yet.
+        {% endif %}
+    </p>
+</div>
+{% endif %}
+{% endblock %}

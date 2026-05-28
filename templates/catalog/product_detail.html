@@ -1,0 +1,98 @@
+{% extends "catalog/base.html" %}
+{% block title %}{{ product.name }}{% endblock %}
+
+{% block nav_extra %}
+<a href="{% url 'catalog:gallery' %}" class="nav-link">
+    <i class="bi bi-arrow-left me-1"></i>Back to Gallery
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 justify-content-center">
+
+    <!-- Image -->
+    <div class="col-lg-5">
+        {% if product.image %}
+        <img src="{{ product.image.url }}" alt="{{ product.name }}" class="detail-img img-fluid shadow-sm">
+        {% else %}
+        <div class="detail-img d-flex align-items-center justify-content-center" style="height:380px;">
+            <i class="bi bi-gem text-muted" style="font-size:6rem; opacity:0.25;"></i>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Details -->
+    <div class="col-lg-7">
+        <div class="mb-1">
+            <span class="text-muted small">{{ product.production_job.job_number }}</span>
+        </div>
+        <h2 class="fw-bold mb-3" style="color:#1a1a2e;">{{ product.name }}</h2>
+
+        <div class="row g-3 mb-4">
+            {% if product.metal_type %}
+            <div class="col-6 col-md-4">
+                <div class="detail-label">Metal Type</div>
+                <div class="detail-value">{{ product.metal_type }}</div>
+            </div>
+            {% endif %}
+            {% if product.purity %}
+            <div class="col-6 col-md-4">
+                <div class="detail-label">Purity / Karat</div>
+                <div class="detail-value">{{ product.purity }}</div>
+            </div>
+            {% endif %}
+            {% if product.final_weight %}
+            <div class="col-6 col-md-4">
+                <div class="detail-label">Final Weight</div>
+                <div class="detail-value">{{ product.final_weight|floatformat:3 }} g</div>
+            </div>
+            {% endif %}
+            <div class="col-6 col-md-4">
+                <div class="detail-label">Surface Finish</div>
+                <div class="detail-value">{{ product.get_finish_display }}</div>
+            </div>
+            {% if product.hallmark %}
+            <div class="col-6 col-md-4">
+                <div class="detail-label">Hallmark / Stamp</div>
+                <div class="detail-value">{{ product.hallmark }}</div>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if product.stone_details %}
+        <div class="mb-3">
+            <div class="detail-label mb-1">Stone / Gem Details</div>
+            <p class="mb-0">{{ product.stone_details }}</p>
+        </div>
+        {% endif %}
+
+        {% if product.description %}
+        <div class="mb-3">
+            <div class="detail-label mb-1">Description</div>
+            <p class="mb-0">{{ product.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if product.notes %}
+        <div class="mb-3">
+            <div class="detail-label mb-1">Additional Notes</div>
+            <p class="mb-0 text-muted small">{{ product.notes }}</p>
+        </div>
+        {% endif %}
+
+        <hr class="my-4">
+
+        <div class="text-muted small">
+            <i class="bi bi-clock me-1"></i>
+            Recorded {{ product.created_at|date:"d M Y, H:i" }}
+            &mdash; {{ product.created_by.get_full_name|default:product.created_by.username }}
+        </div>
+
+        <div class="mt-4">
+            <a href="{% url 'catalog:gallery' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-2"></i>Back to Gallery
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

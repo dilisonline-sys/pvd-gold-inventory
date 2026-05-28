@@ -54,6 +54,7 @@ class Command(BaseCommand):
         self._setup_process_stages()
         self._setup_material_categories()
         self._setup_item_types()
+        self._setup_catalog_settings()
 
         if not options['skip_demo_user']:
             self._setup_demo_users(options['admin_password'])
@@ -63,6 +64,7 @@ class Command(BaseCommand):
         self.stdout.write('  Admin login: admin / ' + options['admin_password'])
         self.stdout.write('  Manager login: manager / manager123')
         self.stdout.write('  Worker login: worker / worker123')
+        self.stdout.write('  Catalog viewer password: catalog123')
         self.stdout.write('')
         self.stdout.write('  Run the server: python manage.py runserver')
 
@@ -108,6 +110,14 @@ class Command(BaseCommand):
             if is_new:
                 created += 1
         self.stdout.write(f'  Item types: {created} created')
+
+    def _setup_catalog_settings(self):
+        from catalog.models import CatalogSettings
+        obj, created = CatalogSettings.objects.get_or_create(pk=1)
+        if created:
+            obj.set_password('catalog123')
+            obj.save()
+        self.stdout.write(f'  Catalog settings: {"created" if created else "already existed"}')
 
     def _setup_demo_users(self, admin_password):
         demo_users = [

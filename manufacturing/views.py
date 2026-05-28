@@ -522,3 +522,47 @@ def final_product_create(request, pk):
         'job': job,
         'existing': instance,
     })
+
+
+# ---------------------------------------------------------------------------
+# Final Product Inventory (data-entry list)
+# ---------------------------------------------------------------------------
+
+@login_required
+def final_product_inventory(request):
+    """List all final products; data-entry team can edit, supervisors+ can add."""
+    from django.core.paginator import Paginator
+
+    qs = (
+        FinalProduct.objects
+        .select_related('production_job', 'created_by')
+        .order_by('-created_at')
+    )
+
+    # Filters
+    search = request.GET.get('q', '').strip()
+    metal  = request.GET.get('metal', '').strip()
+    finish = request.GET.get('finish', '').strip()
+
+    if search:
+        qs = qs.filter(name__icontains=search) | qs.filter(
+            production_job__job_number__icontains=search)
+    if metal:
+        qs = qs.filter(metal_type__icontains=metal)
+    if finish:
+        qs = qs.filter(finish=finish)
+
+    paginator = Paginator(qs, 20)
+    page = paginator.get_page(request.GET.get('page'))
+
+    from .models import PRODUCT_FINISH_CHOICES
+    return render(request, 'manufacturing/final_product_inventory.html', {
+        'page_obj': page,
+        'products': page.object_list,
+        'finish_choices': PRODUCT_FINISH_CHOICES,
+        'filter_search': search,
+        'filter_metal': metal,
+        'filter_finish': finish,
+        'total': qs.count(),
+        'can_manage': _is_supervisor_or_above(request.user),
+    })

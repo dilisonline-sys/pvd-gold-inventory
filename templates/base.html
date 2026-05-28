@@ -129,6 +129,9 @@
         <a class="nav-link {% block nav_prod_dashboard %}{% endblock %}" href="{% url 'manufacturing:production_dashboard' %}">
             <i class="bi bi-bar-chart-line"></i> Production Overview
         </a>
+        <a class="nav-link {% block nav_final_products %}{% endblock %}" href="{% url 'manufacturing:final_product_inventory' %}">
+            <i class="bi bi-gem"></i> Final Products
+        </a>
     </nav>
 
     <div class="nav-section-title">Inventory</div>
@@ -193,6 +196,9 @@
     <nav class="nav flex-column">
         <a class="nav-link {% block nav_help %}{% endblock %}" href="{% url 'help' %}">
             <i class="bi bi-question-circle"></i> Help &amp; User Guide
+        </a>
+        <a class="nav-link" href="{% url 'catalog:gallery' %}" target="_blank">
+            <i class="bi bi-shop"></i> Product Catalog
         </a>
     </nav>
 </div>
