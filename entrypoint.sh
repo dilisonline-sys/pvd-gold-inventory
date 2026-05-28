@@ -4,20 +4,22 @@ echo "======================================"
 echo "  PVD Goldsmith Manufacturing System  "
 echo "======================================"
 
-# Abort on any unhandled error
-set -e
-
 # Ensure the data directory exists (the named volume is mounted here)
 mkdir -p /app/data /app/media /app/staticfiles
 
 echo "[1/4] Running database migrations..."
-python manage.py migrate --noinput
+if ! python manage.py migrate --noinput; then
+    echo "ERROR: Database migration failed. Aborting." >&2
+    exit 1
+fi
 
 echo "[2/4] Loading initial data..."
-python manage.py setup_initial_data
+if ! python manage.py setup_initial_data; then
+    echo "WARNING: setup_initial_data failed — continuing anyway." >&2
+fi
 
 echo "[3/4] Collecting static files..."
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput || echo "WARNING: collectstatic failed — continuing anyway."
 
 echo "[4/4] Starting Gunicorn server..."
 echo ""
