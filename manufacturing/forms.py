@@ -54,6 +54,8 @@ class ProcessRecordForm(forms.ModelForm):
         fields = [
             'assigned_to',
             'status',
+            'started_at',
+            'completed_at',
             'notes',
             'weight_in',
             'weight_out',
@@ -63,6 +65,14 @@ class ProcessRecordForm(forms.ModelForm):
         widgets = {
             'assigned_to': forms.Select(attrs={'class': 'form-select'}),
             'status': forms.Select(attrs={'class': 'form-select'}),
+            'started_at': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
+            'completed_at': forms.DateTimeInput(
+                attrs={'class': 'form-control', 'type': 'datetime-local'},
+                format='%Y-%m-%dT%H:%M',
+            ),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'weight_in': forms.NumberInput(
                 attrs={'class': 'form-control', 'step': '0.0001'}
@@ -82,6 +92,8 @@ class ProcessRecordForm(forms.ModelForm):
         self.fields['assigned_to'].queryset = User.objects.filter(
             is_active=True
         ).order_by('username')
+        self.fields['started_at'].required = False
+        self.fields['completed_at'].required = False
 
 
 class MaterialIssuanceForm(forms.ModelForm):

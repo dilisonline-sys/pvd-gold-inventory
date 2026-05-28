@@ -1,0 +1,817 @@
+{% extends "base.html" %}
+{% block title %}Help & User Guide{% endblock %}
+{% block nav_help %}active{% endblock %}
+{% block page_title %}Help &amp; User Guide{% endblock %}
+
+{% block content %}
+<style>
+    .help-section { scroll-margin-top: 80px; }
+    .help-toc a { color: var(--gold-dark); text-decoration: none; font-size: 0.9rem; }
+    .help-toc a:hover { text-decoration: underline; }
+    .help-toc .toc-sub { padding-left: 1.2rem; font-size: 0.85rem; }
+    .help-example {
+        background: #f8f9fa; border-left: 4px solid var(--gold);
+        border-radius: 0 8px 8px 0; padding: 14px 18px; margin: 12px 0;
+        font-size: 0.9rem;
+    }
+    .help-example .label { font-size: 0.72rem; font-weight: 700; color: var(--gold-dark);
+        text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+    .help-step { display: flex; gap: 14px; margin-bottom: 14px; align-items: flex-start; }
+    .help-step-num {
+        min-width: 28px; height: 28px; border-radius: 50%; background: var(--gold);
+        color: #fff; font-weight: 700; font-size: 0.8rem;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .role-pill { display: inline-block; padding: 2px 10px; border-radius: 12px;
+        font-size: 0.75rem; font-weight: 600; margin: 2px; }
+    .role-admin { background: #dc3545; color: #fff; }
+    .role-manager { background: #fd7e14; color: #fff; }
+    .role-supervisor { background: var(--gold); color: #fff; }
+    .role-worker { background: #0d6efd; color: #fff; }
+    .role-clerk { background: #198754; color: #fff; }
+    .role-viewer { background: #6c757d; color: #fff; }
+    .kbd { display: inline-block; background: #e9ecef; border: 1px solid #ced4da;
+        border-radius: 4px; padding: 1px 6px; font-family: monospace; font-size: 0.85em; }
+    .help-warn { background: #fff3cd; border-left: 4px solid #ffc107;
+        border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 12px 0; font-size: 0.9rem; }
+    .help-tip { background: #d1ecf1; border-left: 4px solid #0dcaf0;
+        border-radius: 0 8px 8px 0; padding: 12px 16px; margin: 12px 0; font-size: 0.9rem; }
+    .stage-flow { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 10px 0; }
+    .stage-chip { background: #f5e6a3; color: #6b4c00; padding: 4px 12px;
+        border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .stage-arrow { color: var(--gold-dark); font-weight: 700; }
+    .csv-code { font-family: monospace; font-size: 0.82rem; background: #1e1e1e;
+        color: #d4d4d4; padding: 14px; border-radius: 8px; overflow-x: auto; }
+</style>
+
+<div class="row g-4">
+    <!-- Table of Contents -->
+    <div class="col-lg-3 d-none d-lg-block">
+        <div class="card sticky-top" style="top:80px;">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-list-ul me-2" style="color:var(--gold);"></i>Contents
+            </div>
+            <div class="card-body p-3 help-toc">
+                <div class="mb-2"><a href="#overview"><strong>1. Overview</strong></a></div>
+                <div class="mb-2"><a href="#login"><strong>2. Logging In</strong></a></div>
+                <div class="mb-2"><a href="#roles"><strong>3. User Roles</strong></a></div>
+                <div class="toc-sub mb-1"><a href="#role-admin">Administrator</a></div>
+                <div class="toc-sub mb-1"><a href="#role-manager">Manager</a></div>
+                <div class="toc-sub mb-1"><a href="#role-supervisor">Supervisor</a></div>
+                <div class="toc-sub mb-1"><a href="#role-worker">Production Worker</a></div>
+                <div class="toc-sub mb-2"><a href="#role-clerk">Inventory Clerk</a></div>
+                <div class="mb-2"><a href="#dashboard"><strong>4. Dashboard</strong></a></div>
+                <div class="mb-2"><a href="#manufacturing"><strong>5. Manufacturing</strong></a></div>
+                <div class="toc-sub mb-1"><a href="#create-job">Creating a Job</a></div>
+                <div class="toc-sub mb-1"><a href="#pipeline">Production Pipeline</a></div>
+                <div class="toc-sub mb-1"><a href="#update-stage">Updating a Stage</a></div>
+                <div class="toc-sub mb-1"><a href="#dates-times">Date &amp; Time Tracking</a></div>
+                <div class="toc-sub mb-2"><a href="#quality-check">Quality Control</a></div>
+                <div class="mb-2"><a href="#inventory"><strong>6. Inventory</strong></a></div>
+                <div class="toc-sub mb-1"><a href="#stock-entry">Stock Entry</a></div>
+                <div class="toc-sub mb-1"><a href="#bulk-upload">Bulk CSV Upload</a></div>
+                <div class="toc-sub mb-2"><a href="#low-stock">Low Stock Alerts</a></div>
+                <div class="mb-2"><a href="#orders"><strong>7. Orders</strong></a></div>
+                <div class="toc-sub mb-1"><a href="#create-order">Creating an Order</a></div>
+                <div class="toc-sub mb-2"><a href="#order-status">Order Status</a></div>
+                <div class="mb-2"><a href="#reports"><strong>8. Reports</strong></a></div>
+                <div class="mb-2"><a href="#users"><strong>9. User Management</strong></a></div>
+                <div class="mb-2"><a href="#faq"><strong>10. FAQ</strong></a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-9">
+
+        <!-- ============================================================ -->
+        <!-- 1. Overview -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="overview">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-gem me-2" style="color:var(--gold);"></i>
+                <strong>1. Overview</strong>
+            </div>
+            <div class="card-body">
+                <p>The <strong>PVD Goldsmith Manufacturing System</strong> is a web-based platform for managing the complete lifecycle of jewelry production — from customer order to final delivery. It covers:</p>
+                <ul>
+                    <li><strong>11-stage manufacturing pipeline</strong> with automatic date/time tracking at each stage</li>
+                    <li><strong>Inventory management</strong> for raw materials (gold, silver, gems, chemicals)</li>
+                    <li><strong>Customer orders</strong> with revenue tracking</li>
+                    <li><strong>Quality control</strong> checks per production stage</li>
+                    <li><strong>Reports</strong> for production efficiency, gold consumption, and worker productivity</li>
+                    <li><strong>Role-based access</strong> so each team member sees only what they need</li>
+                </ul>
+                <div class="help-tip">
+                    <i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> The sidebar on the left gives you access to every section. Your role determines which sections are visible to you.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 2. Logging In -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="login">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-box-arrow-in-right me-2" style="color:var(--gold);"></i>
+                <strong>2. Logging In</strong>
+            </div>
+            <div class="card-body">
+                <p>Open your browser and go to <strong>http://localhost:8000</strong> (or your server address). You will see the login screen.</p>
+
+                <div class="help-step">
+                    <div class="help-step-num">1</div>
+                    <div>Enter your <strong>Username</strong> and <strong>Password</strong>.</div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">2</div>
+                    <div>Click <strong>Sign In</strong>. You will be redirected to the main dashboard.</div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">3</div>
+                    <div>To log out, click your name in the top-right corner and select <strong>Logout</strong>.</div>
+                </div>
+
+                <div class="help-example">
+                    <div class="label">Demo Accounts (first run only)</div>
+                    <table class="table table-sm mb-0" style="font-size:0.85rem;">
+                        <thead><tr><th>Username</th><th>Password</th><th>Role</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>admin</code></td><td><code>admin123</code></td><td>Administrator</td></tr>
+                            <tr><td><code>manager</code></td><td><code>manager123</code></td><td>Manager</td></tr>
+                            <tr><td><code>supervisor</code></td><td><code>super123</code></td><td>Supervisor</td></tr>
+                            <tr><td><code>worker</code></td><td><code>worker123</code></td><td>Production Worker</td></tr>
+                            <tr><td><code>inventory</code></td><td><code>inv123</code></td><td>Inventory Clerk</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="help-warn">
+                    <i class="bi bi-exclamation-triangle me-2"></i><strong>Important:</strong> Create your real user accounts and deactivate the demo accounts before going live.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 3. User Roles -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="roles">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-person-badge me-2" style="color:var(--gold);"></i>
+                <strong>3. User Roles &amp; Permissions</strong>
+            </div>
+            <div class="card-body">
+                <p>Every user is assigned one of six roles. The system automatically restricts menu items and actions based on the logged-in user's role.</p>
+
+                <div id="role-admin" class="mb-4">
+                    <h6><span class="role-pill role-admin">Administrator</span></h6>
+                    <p class="mb-1">Full access to everything in the system.</p>
+                    <ul class="mb-0 small">
+                        <li>Create, edit, and deactivate user accounts</li>
+                        <li>Access all manufacturing, inventory, order, and report features</li>
+                        <li>Access the Django system admin panel (<code>/admin/</code>)</li>
+                        <li>Change any user's role</li>
+                    </ul>
+                </div>
+
+                <div id="role-manager" class="mb-4">
+                    <h6><span class="role-pill role-manager">Manager</span></h6>
+                    <p class="mb-1">All operational features plus all reports. Cannot manage user accounts.</p>
+                    <ul class="mb-0 small">
+                        <li>View and manage all production jobs and orders</li>
+                        <li>Access production, inventory, gold consumption, and worker reports</li>
+                        <li>Approve or reject material issuances</li>
+                    </ul>
+                </div>
+
+                <div id="role-supervisor" class="mb-4">
+                    <h6><span class="role-pill role-supervisor">Supervisor</span></h6>
+                    <p class="mb-1">Create and manage jobs and orders; manage stage operations.</p>
+                    <ul class="mb-0 small">
+                        <li>Create new production jobs and assign workers to stages</li>
+                        <li>Advance jobs through the production pipeline</li>
+                        <li>Issue materials and record QC checks</li>
+                        <li>Cannot access management reports</li>
+                    </ul>
+                </div>
+
+                <div id="role-worker" class="mb-4">
+                    <h6><span class="role-pill role-worker">Production Worker</span></h6>
+                    <p class="mb-1">Update stages they are personally assigned to.</p>
+                    <ul class="mb-0 small">
+                        <li>View the job list and job details</li>
+                        <li>Update weight, notes, and status for their assigned stage only</li>
+                        <li>Cannot create jobs, advance stages, or view reports</li>
+                    </ul>
+                </div>
+
+                <div id="role-clerk" class="mb-4">
+                    <h6><span class="role-pill role-clerk">Inventory Clerk</span></h6>
+                    <p class="mb-1">Full inventory management access.</p>
+                    <ul class="mb-0 small">
+                        <li>Add and edit raw materials and suppliers</li>
+                        <li>Record stock entries (individual and bulk CSV upload)</li>
+                        <li>View stock history and low-stock alerts</li>
+                        <li>Cannot access manufacturing or order management</li>
+                    </ul>
+                </div>
+
+                <div class="mb-2">
+                    <h6><span class="role-pill role-viewer">Viewer</span></h6>
+                    <p class="mb-0 small">Read-only access across all modules. Can view but not edit anything.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 4. Dashboard -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="dashboard">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-speedometer2 me-2" style="color:var(--gold);"></i>
+                <strong>4. Dashboard</strong>
+            </div>
+            <div class="card-body">
+                <p>The dashboard is the first screen after login. It gives a real-time overview of the entire operation.</p>
+                <table class="table table-sm small">
+                    <thead><tr><th>Section</th><th>What it shows</th></tr></thead>
+                    <tbody>
+                        <tr><td><strong>Stat Cards (top row)</strong></td><td>Total active jobs, pending orders, low-stock materials, and active workers today</td></tr>
+                        <tr><td><strong>Production Pipeline</strong></td><td>Count of jobs currently at each of the 11 manufacturing stages</td></tr>
+                        <tr><td><strong>Low Stock Alerts</strong></td><td>Materials whose current stock is at or below the minimum level</td></tr>
+                        <tr><td><strong>Recent Jobs</strong></td><td>The 5 most recently created production jobs with status and priority</td></tr>
+                        <tr><td><strong>Recent Orders</strong></td><td>The 5 most recent customer orders with value and delivery date</td></tr>
+                    </tbody>
+                </table>
+                <div class="help-tip">
+                    <i class="bi bi-lightbulb me-2"></i>Click any job number or order number in the dashboard tables to jump directly to that record's detail page.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 5. Manufacturing -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="manufacturing">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-gear me-2" style="color:var(--gold);"></i>
+                <strong>5. Manufacturing</strong>
+            </div>
+            <div class="card-body">
+
+                <!-- Pipeline overview -->
+                <div id="pipeline" class="mb-4">
+                    <h5 class="fw-semibold mb-2">The 11-Stage Production Pipeline</h5>
+                    <p>Every production job moves through the following stages in order. Each stage is linked automatically to the next:</p>
+                    <div class="stage-flow">
+                        <span class="stage-chip">Design</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Wax Carving</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Investment / Burnout</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Casting</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Filing</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Polishing</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Stone Setting</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Quality Control</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Plating</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Final Inspection</span><span class="stage-arrow">→</span>
+                        <span class="stage-chip">Packaging</span>
+                    </div>
+                    <p class="small text-muted mt-2">A job can only be at one stage at a time. Advancing creates a new process record for the next stage automatically.</p>
+                </div>
+
+                <!-- Creating a Job -->
+                <div id="create-job" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Creating a Production Job</h5>
+                    <p><strong>Who can do this:</strong> <span class="role-pill role-admin">Admin</span> <span class="role-pill role-manager">Manager</span> <span class="role-pill role-supervisor">Supervisor</span></p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>In the sidebar, click <strong>Manufacturing → Job List</strong>.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Click the <strong>New Job</strong> button (top-right of the Job List page).</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Fill in the job form:
+                            <ul class="mt-1 small">
+                                <li><strong>Job Order</strong> — link to an existing customer order (optional)</li>
+                                <li><strong>Description</strong> — e.g. "18K Gold Ring with Diamond"</li>
+                                <li><strong>Metal Type</strong> — Gold, Silver, Platinum, etc.</li>
+                                <li><strong>Purity</strong> — e.g. 18K, 22K, 925</li>
+                                <li><strong>Gross Weight (g)</strong> — starting weight of the piece</li>
+                                <li><strong>Priority</strong> — Low / Medium / High / Urgent</li>
+                                <li><strong>Target Completion Date</strong> — when the job should be finished</li>
+                                <li><strong>Special Instructions</strong> — any notes for the production team</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Click <strong>Save</strong>. The system automatically assigns a job number (format: <code>PJ-YYYY-NNNN</code>) and the current date/time as the creation timestamp. The job starts at the <strong>Design</strong> stage.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">Example</div>
+                        Creating a job with Description <em>"22K Bangle — Fatima Wedding Set"</em>, Metal Type <em>Gold</em>, Purity <em>22K</em>, Gross Weight <em>48.5g</em>, Priority <em>High</em>, Target Date <em>15 Jun 2026</em> will generate job number <code>PJ-2026-0001</code> automatically.
+                    </div>
+                </div>
+
+                <!-- Updating a Stage -->
+                <div id="update-stage" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Updating a Stage</h5>
+                    <p><strong>Who can do this:</strong> <span class="role-pill role-supervisor">Supervisor</span> <span class="role-pill role-manager">Manager</span> <span class="role-pill role-admin">Admin</span> — and <span class="role-pill role-worker">Workers</span> for their assigned stages.</p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>Open a job from the <strong>Job List</strong> by clicking its job number.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Click <strong>Update Stage</strong> (gold button, top of the page).</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Set the <strong>Status</strong>:
+                            <ul class="small mt-1">
+                                <li><strong>In Progress</strong> — the <em>Started At</em> date/time is recorded automatically right now.</li>
+                                <li><strong>Completed</strong> — the <em>Completed At</em> date/time is recorded automatically right now.</li>
+                                <li><strong>Pending / On Hold / Failed</strong> — no auto-timestamp.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Optionally override <strong>Started At</strong> or <strong>Completed At</strong> if the work actually happened at a different time (e.g., recording yesterday's work today).</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">5</div>
+                        <div>Enter <strong>Weight In</strong> and <strong>Weight Out</strong> (grams). The system calculates the material loss automatically.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">6</div>
+                        <div>Click <strong>Save Stage Update</strong>. To move to the next stage, use the <strong>Advance to Next Stage</strong> button on the job detail page instead.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">Example — Casting Stage</div>
+                        Polisher sets Status to <em>In Progress</em>. System records <em>Started At: 28 May 2026, 09:15</em> automatically.
+                        After casting is done, they set Status to <em>Completed</em>, enter Weight In <em>52.3g</em>, Weight Out <em>50.8g</em>. System records <em>Completed At: 28 May 2026, 14:30</em> and calculates loss of <em>1.5g</em>.
+                    </div>
+                </div>
+
+                <!-- Date & Time Tracking -->
+                <div id="dates-times" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Automatic Date &amp; Time Tracking</h5>
+                    <p>The system records dates and times at every key event — you do not need to type them in:</p>
+                    <table class="table table-sm small">
+                        <thead><tr><th>Event</th><th>What is recorded automatically</th></tr></thead>
+                        <tbody>
+                            <tr><td>Job created</td><td>Creation date &amp; time (shown in the job list)</td></tr>
+                            <tr><td>Stage status → <em>In Progress</em></td><td><strong>Started At</strong> timestamp on the process record</td></tr>
+                            <tr><td>Stage status → <em>Completed</em></td><td><strong>Completed At</strong> timestamp on the process record</td></tr>
+                            <tr><td>Stage advanced to next</td><td>Current stage auto-completed with timestamp; new stage record created with its own timestamp</td></tr>
+                            <tr><td>QC check recorded</td><td>QC check date &amp; time (<em>Checked At</em>)</td></tr>
+                            <tr><td>Material issued</td><td>Issuance date &amp; time (<em>Issued At</em>)</td></tr>
+                            <tr><td>Stock entry recorded</td><td>Entry date &amp; time</td></tr>
+                            <tr><td>Order placed</td><td>Order creation date &amp; time</td></tr>
+                        </tbody>
+                    </table>
+                    <p>The <strong>Process Records</strong> table on every job detail page shows all stages sorted by most recent first, with <em>Started At</em> and <em>Completed At</em> columns visible.</p>
+                    <div class="help-tip">
+                        <i class="bi bi-clock me-2"></i>All timestamps are saved in your server's timezone. If your server is hosted remotely, confirm the timezone is set correctly in Django settings (<code>TIME_ZONE</code>).
+                    </div>
+                </div>
+
+                <!-- Quality Control -->
+                <div id="quality-check" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Quality Control (QC) Checks</h5>
+                    <p><strong>Who can do this:</strong> <span class="role-pill role-supervisor">Supervisor</span> <span class="role-pill role-manager">Manager</span> <span class="role-pill role-admin">Admin</span></p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>Open a job and click <strong>QC Check</strong> (blue button).</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Select the <strong>Stage</strong> being checked and choose a <strong>Result</strong>: <em>Pass</em>, <em>Fail</em>, or <em>Conditional</em>.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Enter <strong>Defects Found</strong> and any <strong>Corrective Actions</strong> required.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Save. The check date and time are recorded automatically. All QC records appear in the job detail page.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">Example</div>
+                        After the Polishing stage, QC Inspector records: Result <em>Conditional</em>, Defects <em>"Minor scratch on inner band"</em>, Corrective Action <em>"Re-polish inner surface for 10 minutes"</em>. The QC record is timestamped immediately.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 6. Inventory -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="inventory">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-boxes me-2" style="color:var(--gold);"></i>
+                <strong>6. Inventory Management</strong>
+            </div>
+            <div class="card-body">
+                <p>The inventory module tracks all raw materials used in production — gold alloys, silver, gemstones, chemicals, and tools.</p>
+
+                <!-- Stock Entry -->
+                <div id="stock-entry" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Recording a Stock Entry</h5>
+                    <p><strong>Who can do this:</strong> <span class="role-pill role-clerk">Inventory Clerk</span> <span class="role-pill role-supervisor">Supervisor</span> <span class="role-pill role-manager">Manager</span> <span class="role-pill role-admin">Admin</span></p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>Click <strong>Inventory → Stock Entry</strong> in the sidebar.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Select the <strong>Material</strong> from the dropdown (e.g. "Gold 18K Alloy").</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Enter the <strong>Quantity</strong> (in the material's unit — grams, pieces, litres) and the <strong>Unit Cost</strong>. The total cost is calculated automatically.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Optionally fill in <strong>Supplier</strong>, <strong>Batch Number</strong>, <strong>Purity</strong>, and <strong>Notes</strong>.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">5</div>
+                        <div>Click <strong>Save Stock Entry</strong>. The entry date and time are recorded automatically. The current stock balance updates instantly.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">Example</div>
+                        Receiving a delivery: Material <em>Gold 18K Alloy</em>, Quantity <em>250g</em>, Unit Cost <em>AED 85.00/g</em>, Supplier <em>Gulf Gold Suppliers LLC</em>, Batch <em>GG-2026-047</em>. System records Total Cost <em>AED 21,250.00</em> and timestamps the entry at the current date/time.
+                    </div>
+                </div>
+
+                <!-- Bulk Upload -->
+                <div id="bulk-upload" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Bulk Stock Upload via CSV</h5>
+                    <p>Use this when you receive a large delivery with many different materials at once.</p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>Click <strong>Inventory → Bulk Stock Upload</strong>.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Click <strong>Download Sample CSV</strong> to get a template file.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Open the CSV in Excel or any spreadsheet app. Fill in your data — one row per material.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Save the file as <strong>.csv</strong> format and upload it on the Bulk Stock Upload page.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">5</div>
+                        <div>The system processes each row. Rows with errors are reported individually — valid rows are still saved.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">CSV Format</div>
+                        <div class="csv-code">material_name,quantity,unit_cost,supplier_name,batch_number,purity,notes
+Gold 18K Alloy,250.5,85.00,Gulf Gold Suppliers,GG-047,18K,Yellow gold alloy ingot
+Silver 925,1200.0,1.20,Silver House FZE,SH-2026-12,925,Sterling silver wire
+Diamond Round 0.5ct,50,320.00,Gem Traders LLC,GT-D-099,,Round brilliant cut
+Casting Wax,200,0.45,Industrial Supply,,,Red injection wax</div>
+                        <div class="mt-2 small text-muted">Columns: material_name (required), quantity (required), unit_cost (required), supplier_name, batch_number, purity, notes</div>
+                    </div>
+
+                    <div class="help-warn">
+                        <i class="bi bi-exclamation-triangle me-2"></i><strong>Note:</strong> The <code>material_name</code> must exactly match a material already in the system. If the material does not exist, that row will be skipped with an error message. Add the material first via <strong>Inventory → Raw Materials → Add Material</strong>.
+                    </div>
+                </div>
+
+                <!-- Low Stock -->
+                <div id="low-stock" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Low Stock Alerts</h5>
+                    <p>The system automatically flags materials when their stock falls at or below the <strong>Minimum Stock Level</strong> set on each material.</p>
+                    <ul class="small">
+                        <li>View all alerts at <strong>Inventory → Low Stock Alerts</strong></li>
+                        <li>The dashboard also shows a summary count in the stat cards</li>
+                        <li>To update the minimum level, go to <strong>Inventory → Raw Materials</strong> and edit the material</li>
+                    </ul>
+                    <div class="help-example">
+                        <div class="label">Example</div>
+                        If Gold 18K Alloy has Minimum Stock Level = 100g and current stock = 85g, it appears in the Low Stock Alerts list highlighted in red.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 7. Orders -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="orders">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-bag me-2" style="color:var(--gold);"></i>
+                <strong>7. Customer Orders</strong>
+            </div>
+            <div class="card-body">
+
+                <div id="create-order" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Creating an Order</h5>
+                    <p><strong>Who can do this:</strong> <span class="role-pill role-supervisor">Supervisor</span> <span class="role-pill role-manager">Manager</span> <span class="role-pill role-admin">Admin</span></p>
+
+                    <div class="help-step">
+                        <div class="help-step-num">1</div>
+                        <div>Click <strong>Orders → Customers</strong>. Add the customer if they are new (<strong>Add Customer</strong> button).</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">2</div>
+                        <div>Click <strong>Orders → Job Orders → New Order</strong>.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">3</div>
+                        <div>Select the <strong>Customer</strong>, enter <strong>Item Type</strong> (Ring, Necklace, Bracelet, etc.), and fill in design details, metal type, stone specifications, and pricing.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">4</div>
+                        <div>Set the <strong>Required Date</strong> — the customer's deadline. The system will flag the order as overdue if this date passes before delivery.</div>
+                    </div>
+                    <div class="help-step">
+                        <div class="help-step-num">5</div>
+                        <div>Click <strong>Save</strong>. An order number is generated automatically (format: <code>JO-YYYY-NNNN</code>) and the order date/time is recorded.</div>
+                    </div>
+
+                    <div class="help-example">
+                        <div class="label">Example</div>
+                        Customer <em>Mrs. Al-Rashidi</em>, Item Type <em>Ring</em>, Metal <em>Gold 18K</em>, Stone <em>Ruby 2ct centre, 10 diamond accents</em>, Total Price <em>AED 4,800</em>, Advance Paid <em>AED 2,000</em>, Required Date <em>20 Jun 2026</em>. System generates order <code>JO-2026-0012</code> with Balance Due = AED 2,800.
+                    </div>
+                </div>
+
+                <div id="order-status" class="mb-4">
+                    <h5 class="fw-semibold mb-2">Order Status Flow</h5>
+                    <table class="table table-sm small">
+                        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+                        <tbody>
+                            <tr><td><span class="badge bg-secondary">Pending</span></td><td>Order received; not yet in production</td></tr>
+                            <tr><td><span class="badge bg-primary">In Production</span></td><td>Linked production job is active</td></tr>
+                            <tr><td><span class="badge bg-warning text-dark">On Hold</span></td><td>Paused — waiting for customer confirmation, stone delivery, etc.</td></tr>
+                            <tr><td><span class="badge bg-success">Completed</span></td><td>Item delivered to customer</td></tr>
+                            <tr><td><span class="badge bg-danger">Cancelled</span></td><td>Order cancelled</td></tr>
+                        </tbody>
+                    </table>
+                    <div class="help-tip">
+                        <i class="bi bi-lightbulb me-2"></i>Use the <strong>Add Note</strong> button on the order detail page to record customer communications, design changes, or deposit payments — each note is timestamped automatically.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 8. Reports -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="reports">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-graph-up me-2" style="color:var(--gold);"></i>
+                <strong>8. Reports</strong>
+            </div>
+            <div class="card-body">
+                <p><strong>Who can access reports:</strong> <span class="role-pill role-admin">Admin</span> <span class="role-pill role-manager">Manager</span></p>
+                <p>All reports are accessed from the <strong>Reports</strong> section in the sidebar.</p>
+
+                <table class="table table-sm small">
+                    <thead><tr><th>Report</th><th>What it shows</th><th>Use case</th></tr></thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Production Report</strong></td>
+                            <td>Jobs by status, average completion time, jobs per stage</td>
+                            <td>Monitor production throughput and identify bottlenecks</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Inventory Report</strong></td>
+                            <td>Current stock levels, total stock value, stock by category</td>
+                            <td>Assess raw material stock value and coverage</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Gold Consumption</strong></td>
+                            <td>Weight issued vs. weight recovered per job and per stage; waste percentage</td>
+                            <td>Track gold losses, identify wasteful stages, audit material usage</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Order Report</strong></td>
+                            <td>Orders by status, revenue, overdue count, delivery performance</td>
+                            <td>Track revenue and monitor on-time delivery</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Worker Productivity</strong></td>
+                            <td>Jobs completed per worker, average stage duration</td>
+                            <td>Evaluate team performance and plan staffing</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="help-example">
+                    <div class="label">Example — Gold Consumption</div>
+                    The Gold Consumption report for May 2026 shows: Job PJ-2026-0015 issued 52.3g of gold, recovered 49.8g, waste 2.5g (4.8%). The Casting stage had the highest loss at 1.2g. This helps management negotiate with workers on reducing casting waste.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 9. User Management -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="users">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-person-gear me-2" style="color:var(--gold);"></i>
+                <strong>9. User Management</strong>
+            </div>
+            <div class="card-body">
+                <p><strong>Who can access:</strong> <span class="role-pill role-admin">Administrator</span> only.</p>
+
+                <h5 class="fw-semibold mb-2">Adding a New User</h5>
+                <div class="help-step">
+                    <div class="help-step-num">1</div>
+                    <div>Click <strong>Administration → User Management</strong> in the sidebar.</div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">2</div>
+                    <div>Click <strong>New User</strong>.</div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">3</div>
+                    <div>Fill in:
+                        <ul class="small mt-1">
+                            <li><strong>Username</strong> — used for login (no spaces)</li>
+                            <li><strong>First Name / Last Name</strong></li>
+                            <li><strong>Email</strong></li>
+                            <li><strong>Employee ID</strong> — your internal HR code</li>
+                            <li><strong>Department</strong> — e.g. "Casting", "Polishing", "Admin"</li>
+                            <li><strong>Role</strong> — choose from the 6 roles above</li>
+                            <li><strong>Password</strong> — the user can change this after first login via their profile</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="help-step">
+                    <div class="help-step-num">4</div>
+                    <div>Click <strong>Create User</strong>. Share the username and password with the employee securely.</div>
+                </div>
+
+                <h5 class="fw-semibold mb-2 mt-4">Deactivating a User</h5>
+                <p class="small">To remove access without deleting the account: edit the user and uncheck <strong>Active</strong>. The user cannot log in, but all their historical records (process records, QC checks) are preserved.</p>
+
+                <div class="help-warn">
+                    <i class="bi bi-exclamation-triangle me-2"></i><strong>Security:</strong> Never share the <code>admin</code> account. Create individual accounts for each employee so the system can correctly attribute work and timestamps to the right person.
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- 10. FAQ -->
+        <!-- ============================================================ -->
+        <div class="card mb-4 help-section" id="faq">
+            <div class="card-header py-3" style="border-left:4px solid var(--gold);">
+                <i class="bi bi-chat-question me-2" style="color:var(--gold);"></i>
+                <strong>10. Frequently Asked Questions</strong>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="faqAccordion">
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq1"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                The timestamp on a stage record is wrong. Can I fix it?
+                            </button>
+                        </h2>
+                        <div id="faq1" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Yes. Open the job, click <strong>Update Stage</strong>, and manually edit the <em>Started At</em> or <em>Completed At</em> field. The auto-fill only happens on the first save; after that you can override it freely.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq2"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                Can I skip a production stage?
+                            </button>
+                        </h2>
+                        <div id="faq2" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Yes. Open the stage record for that stage and set its status to <strong>Skipped</strong>. Then you can advance the job past it. Skipped stages appear in the stage timeline with a grey icon.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq3"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                My bulk CSV upload failed for some rows. What happened to the other rows?
+                            </button>
+                        </h2>
+                        <div id="faq3" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Rows with errors are skipped and listed on the results page with the reason. All valid rows are saved successfully. Fix the errors in your CSV and re-upload only the rows that failed.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq4"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                How do I add a material that is not in the system?
+                            </button>
+                        </h2>
+                        <div id="faq4" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Go to <strong>Inventory → Raw Materials → Add Material</strong>. Set the name, category, unit of measure (grams, pieces, litres), and the minimum stock level for low-stock alerts. Once created, the material will appear in stock entry dropdowns and can be used in bulk uploads.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq5"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                A job is stuck at a stage — the worker left and it's still "In Progress". What do I do?
+                            </button>
+                        </h2>
+                        <div id="faq5" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Supervisors and above can update any stage regardless of assignment. Open the job, click <strong>Update Stage</strong>, reassign to another worker or set status to <strong>Completed</strong> or <strong>On Hold</strong> as appropriate.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq6"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                I forgot my password. How do I reset it?
+                            </button>
+                        </h2>
+                        <div id="faq6" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Ask your Administrator to edit your user account and set a new password. The admin can do this from <strong>Administration → User Management → Edit User</strong>. There is currently no self-service password reset by email.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq7"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                How is gold consumption calculated?
+                            </button>
+                        </h2>
+                        <div id="faq7" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                At each stage, workers enter <strong>Weight In</strong> (grams entering the stage) and <strong>Weight Out</strong> (grams leaving). The system calculates <em>Weight Loss = Weight In − Weight Out</em>. The Gold Consumption Report sums these losses across all stages for each job to give total material consumption and waste percentage.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item border-0 mb-2" style="background:#f8f9fa; border-radius:8px;">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed fw-semibold" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#faq8"
+                                    style="background:#f8f9fa; border-radius:8px;">
+                                Can I run this system without Docker?
+                            </button>
+                        </h2>
+                        <div id="faq8" class="accordion-collapse collapse">
+                            <div class="accordion-body small">
+                                Yes. See the <em>Manual Installation</em> section in the project README on GitHub. You need Python 3.11+ and pip. Run <code>pip install -r requirements.txt</code>, then <code>python manage.py migrate</code>, then <code>python manage.py setup_initial_data</code>, then <code>python manage.py runserver</code>.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-muted small py-3">
+            PVD Goldsmith Manufacturing System &mdash; User Guide &mdash; Version 1.1
+        </div>
+
+    </div><!-- /col-lg-9 -->
+</div><!-- /row -->
+{% endblock %}

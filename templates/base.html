@@ -188,6 +188,13 @@
         </a>
     </nav>
     {% endif %}
+
+    <div class="nav-section-title">Support</div>
+    <nav class="nav flex-column">
+        <a class="nav-link {% block nav_help %}{% endblock %}" href="{% url 'help' %}">
+            <i class="bi bi-question-circle"></i> Help &amp; User Guide
+        </a>
+    </nav>
 </div>
 
 <div class="main-content">

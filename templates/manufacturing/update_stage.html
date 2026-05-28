@@ -5,7 +5,7 @@
 
 {% block content %}
 <div class="row justify-content-center">
-    <div class="col-lg-7">
+    <div class="col-lg-8">
         <!-- Job Info Banner -->
         <div class="card mb-4" style="border-left:4px solid var(--gold);">
             <div class="card-body py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -33,26 +33,7 @@
                     {% csrf_token %}
 
                     <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Weight In (grams)</label>
-                            <input type="number" name="weight_in" step="0.001"
-                                   class="form-control {% if form.weight_in.errors %}is-invalid{% endif %}"
-                                   value="{{ form.weight_in.value|default:'' }}"
-                                   placeholder="0.000">
-                            {% if form.weight_in.errors %}
-                                <div class="invalid-feedback">{{ form.weight_in.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label fw-semibold">Weight Out (grams)</label>
-                            <input type="number" name="weight_out" step="0.001"
-                                   class="form-control {% if form.weight_out.errors %}is-invalid{% endif %}"
-                                   value="{{ form.weight_out.value|default:'' }}"
-                                   placeholder="0.000">
-                            {% if form.weight_out.errors %}
-                                <div class="invalid-feedback">{{ form.weight_out.errors|join:", " }}</div>
-                            {% endif %}
-                        </div>
+                        <!-- Status -->
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Status</label>
                             <select name="status" class="form-select {% if form.status.errors %}is-invalid{% endif %}">
@@ -63,34 +44,75 @@
                             {% if form.status.errors %}
                                 <div class="invalid-feedback">{{ form.status.errors|join:", " }}</div>
                             {% endif %}
+                            <div class="form-text">Setting to <em>In Progress</em> auto-records the start time; <em>Completed</em> auto-records the completion time.</div>
                         </div>
-                        {% for field in form %}
-                            {% if field.html_name not in 'weight_in,weight_out,status,notes' %}
-                            <div class="col-md-6">
-                                <label for="{{ field.id_for_label }}" class="form-label fw-semibold">
-                                    {{ field.label }}{% if field.field.required %} <span class="text-danger">*</span>{% endif %}
-                                </label>
-                                {% if field.field.widget.input_type == 'select' %}
-                                    <select name="{{ field.html_name }}" id="{{ field.id_for_label }}"
-                                            class="form-select {% if field.errors %}is-invalid{% endif %}">
-                                        {% for val, label in field.field.choices %}
-                                        <option value="{{ val }}" {% if field.value|stringformat:"s" == val|stringformat:"s" %}selected{% endif %}>{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                {% else %}
-                                    <input type="{{ field.field.widget.input_type|default:'text' }}"
-                                           name="{{ field.html_name }}"
-                                           id="{{ field.id_for_label }}"
-                                           class="form-control {% if field.errors %}is-invalid{% endif %}"
-                                           value="{{ field.value|default:'' }}"
-                                           {% if field.field.required %}required{% endif %}>
-                                {% endif %}
-                                {% if field.errors %}
-                                    <div class="invalid-feedback">{{ field.errors|join:", " }}</div>
-                                {% endif %}
-                            </div>
+
+                        <!-- Assigned To -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Assigned To</label>
+                            {{ form.assigned_to }}
+                            {% if form.assigned_to.errors %}
+                                <div class="invalid-feedback d-block">{{ form.assigned_to.errors|join:", " }}</div>
                             {% endif %}
-                        {% endfor %}
+                        </div>
+
+                        <!-- Started At -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Started At</label>
+                            {{ form.started_at }}
+                            {% if form.started_at.errors %}
+                                <div class="invalid-feedback d-block">{{ form.started_at.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Auto-filled when status is set to <em>In Progress</em>. Override if needed.</div>
+                        </div>
+
+                        <!-- Completed At -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Completed At</label>
+                            {{ form.completed_at }}
+                            {% if form.completed_at.errors %}
+                                <div class="invalid-feedback d-block">{{ form.completed_at.errors|join:", " }}</div>
+                            {% endif %}
+                            <div class="form-text">Auto-filled when status is set to <em>Completed</em>. Override if needed.</div>
+                        </div>
+
+                        <!-- Weight In -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Weight In (grams)</label>
+                            <input type="number" name="weight_in" step="0.0001"
+                                   class="form-control {% if form.weight_in.errors %}is-invalid{% endif %}"
+                                   value="{{ form.weight_in.value|default:'' }}"
+                                   placeholder="0.0000">
+                            {% if form.weight_in.errors %}
+                                <div class="invalid-feedback">{{ form.weight_in.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Weight Out -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Weight Out (grams)</label>
+                            <input type="number" name="weight_out" step="0.0001"
+                                   class="form-control {% if form.weight_out.errors %}is-invalid{% endif %}"
+                                   value="{{ form.weight_out.value|default:'' }}"
+                                   placeholder="0.0000">
+                            {% if form.weight_out.errors %}
+                                <div class="invalid-feedback">{{ form.weight_out.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Waste Weight -->
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Waste Weight (grams)</label>
+                            <input type="number" name="waste_weight" step="0.0001"
+                                   class="form-control {% if form.waste_weight.errors %}is-invalid{% endif %}"
+                                   value="{{ form.waste_weight.value|default:'' }}"
+                                   placeholder="0.0000">
+                            {% if form.waste_weight.errors %}
+                                <div class="invalid-feedback">{{ form.waste_weight.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Notes -->
                         <div class="col-12">
                             <label class="form-label fw-semibold">Notes</label>
                             <textarea name="notes" rows="3"
@@ -100,9 +122,21 @@
                                 <div class="invalid-feedback">{{ form.notes.errors|join:", " }}</div>
                             {% endif %}
                         </div>
+
+                        <!-- Remarks -->
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Remarks</label>
+                            <textarea name="remarks" rows="2"
+                                      class="form-control {% if form.remarks.errors %}is-invalid{% endif %}"
+                                      placeholder="Additional remarks...">{{ form.remarks.value|default:'' }}</textarea>
+                            {% if form.remarks.errors %}
+                                <div class="invalid-feedback">{{ form.remarks.errors|join:", " }}</div>
+                            {% endif %}
+                        </div>
                     </div>
 
                     <div class="d-flex gap-2 mt-4">
+                        <input type="hidden" name="action" value="update">
                         <button type="submit" class="btn btn-gold">
                             <i class="bi bi-check-lg me-1"></i> Save Stage Update
                         </button>

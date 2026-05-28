@@ -322,12 +322,20 @@ class ProcessRecord(models.Model):
         help_text='Measured waste/scrap generated at this stage, in grams.',
     )
     remarks = models.TextField(blank=True, verbose_name='Remarks')
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Created At')
 
     class Meta:
         verbose_name = 'Process Record'
         verbose_name_plural = 'Process Records'
-        ordering = ['production_job', 'stage__order_number']
+        ordering = ['-created_at']
         unique_together = [('production_job', 'stage')]
+
+    def save(self, *args, **kwargs):
+        if self.status == RECORD_STATUS_IN_PROGRESS and not self.started_at:
+            self.started_at = timezone.now()
+        if self.status == RECORD_STATUS_COMPLETED and not self.completed_at:
+            self.completed_at = timezone.now()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.production_job.job_number} – {self.stage.name}'
