@@ -2,6 +2,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+APP_VERSION = 'v1.6'
+
 SECRET_KEY = "django-insecure-_hf7in912v&4c5-9xxv9(4fv-b7@6y)81ooiszmt9qd_gcf=go"
 
 DEBUG = True
@@ -46,6 +48,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "goldsmith.context_processors.app_version",
             ],
         },
     },
