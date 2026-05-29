@@ -171,8 +171,13 @@
         <div class="card mb-4">
             <div class="card-header py-3 d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-list-check me-2" style="color:var(--gold);"></i>Material Requirements</span>
-                {% if requirements %}
-                <span class="badge {% if requirements|length != requirements|length %}bg-danger{% else %}bg-secondary{% endif %}" id="req-status-badge"></span>
+                {% if can_manage and job.job_order and job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
+                <form method="post" action="{% url 'manufacturing:requirement_auto_calculate' job.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-secondary" title="Auto-calculate requirements from linked job order">
+                        <i class="bi bi-magic me-1"></i>Recalculate from Order
+                    </button>
+                </form>
                 {% endif %}
             </div>
             <div class="card-body p-0">
@@ -191,7 +196,9 @@
                             {% for req in requirements %}
                             <tr>
                                 <td class="small fw-semibold">{{ req.material.name }}
-                                    <div class="text-muted" style="font-size:0.75rem;">{{ req.material.category }}</div>
+                                    <div class="text-muted" style="font-size:0.75rem;">{{ req.material.category }}
+                                        {% if req.notes %} &middot; <span class="text-info">{{ req.notes }}</span>{% endif %}
+                                    </div>
                                 </td>
                                 <td class="small text-end text-nowrap">{{ req.quantity_required|floatformat:3 }} {{ req.material.unit_of_measure }}</td>
                                 <td class="small text-end text-nowrap">{{ req.current_stock|floatformat:3 }} {{ req.material.unit_of_measure }}</td>

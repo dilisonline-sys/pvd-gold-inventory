@@ -1,6 +1,6 @@
 # PVD Goldsmith Manufacturing System
 
-**Version: v1.11**
+**Version: v1.12**
 
 A complete web-based manufacturing management system for goldsmith jewelry companies. Tracks every step of the jewelry production process — from customer order and design through casting, polishing, stone setting, quality control, and final delivery.
 

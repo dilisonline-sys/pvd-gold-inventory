@@ -62,6 +62,77 @@ def _get_or_create_process_record(job, stage):
     return record
 
 
+def _auto_requirements_from_order(job, user):
+    """Auto-create MaterialRequirement records from a linked job order.
+
+    Matches raw materials by metal_type + metal_purity for the primary metal,
+    and by name search for gemstones. Uses get_or_create so existing records
+    are never overwritten. Returns (created_count, unmatched_list).
+    """
+    from inventory.models import RawMaterial
+
+    order = job.job_order
+    if not order:
+        return 0, []
+
+    created = 0
+    unmatched = []
+
+    # --- Primary metal ---
+    metal_qs = RawMaterial.objects.filter(
+        is_active=True,
+        metal_type=order.metal_type,
+        metal_purity=order.metal_purity,
+    )
+    if metal_qs.exists():
+        material = metal_qs.first()
+        qty = order.estimated_weight * order.quantity
+        _, was_created = MaterialRequirement.objects.get_or_create(
+            production_job=job,
+            material=material,
+            defaults={
+                'quantity_required': qty,
+                'notes': f'Auto: {order.order_number}',
+                'created_by': user,
+            },
+        )
+        if was_created:
+            created += 1
+    else:
+        unmatched.append(
+            f'{order.get_metal_type_display()} {order.get_metal_purity_display()} '
+            f'({order.estimated_weight * order.quantity:.3f} g)'
+        )
+
+    # --- Gemstone ---
+    if order.stone_type and order.stone_weight:
+        stone_qs = RawMaterial.objects.filter(
+            is_active=True,
+            name__icontains=order.stone_type,
+        )
+        if stone_qs.exists():
+            material = stone_qs.first()
+            qty = order.stone_weight * order.quantity
+            _, was_created = MaterialRequirement.objects.get_or_create(
+                production_job=job,
+                material=material,
+                defaults={
+                    'quantity_required': qty,
+                    'notes': f'Auto: {order.order_number} (stone)',
+                    'created_by': user,
+                },
+            )
+            if was_created:
+                created += 1
+        else:
+            unmatched.append(
+                f'{order.stone_type} stone '
+                f'({order.stone_weight * order.quantity:.3f} ct)'
+            )
+
+    return created, unmatched
+
+
 # ---------------------------------------------------------------------------
 # Production Dashboard
 # ---------------------------------------------------------------------------
@@ -247,10 +318,19 @@ def job_create(request):
                 job.save()
                 # Create the initial ProcessRecord for the starting stage
                 _get_or_create_process_record(job, job.current_stage)
-            messages.success(
-                request,
-                f'Production job {job.job_number} created successfully.',
-            )
+                # Auto-populate material requirements from the linked order
+                created, unmatched = _auto_requirements_from_order(job, request.user)
+            msg = f'Production job {job.job_number} created successfully.'
+            if created:
+                msg += f' {created} material requirement(s) auto-calculated.'
+            messages.success(request, msg)
+            if unmatched:
+                messages.warning(
+                    request,
+                    'No inventory match found for: ' + ', '.join(unmatched) +
+                    '. Please add those materials to inventory first, then use '
+                    '"Recalculate" on the job detail page.',
+                )
             return redirect('manufacturing:job_detail', pk=job.pk)
     else:
         initial = {}
@@ -467,6 +547,30 @@ def requirement_delete(request, req_pk):
     req.delete()
     messages.success(request, 'Material requirement removed.')
     return redirect('manufacturing:job_detail', pk=job_pk)
+
+
+@login_required
+@supervisor_or_above
+def requirement_auto_calculate(request, pk):
+    """Re-run auto-calculation of material requirements from the linked job order."""
+    job = get_object_or_404(ProductionJob, pk=pk)
+
+    if request.method == 'POST':
+        created, unmatched = _auto_requirements_from_order(job, request.user)
+        if created:
+            messages.success(
+                request,
+                f'{created} material requirement(s) auto-calculated from order {job.job_order.order_number}.',
+            )
+        else:
+            messages.info(request, 'No new requirements added — all already exist or no linked order.')
+        if unmatched:
+            messages.warning(
+                request,
+                'Could not match to inventory: ' + ', '.join(unmatched) +
+                '. Add those materials to inventory, then recalculate.',
+            )
+    return redirect('manufacturing:job_detail', pk=job.pk)
 
 
 # ---------------------------------------------------------------------------
