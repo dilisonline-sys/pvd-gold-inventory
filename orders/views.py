@@ -1,10 +1,13 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.db.models import Q
+from django.http import HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from accounts.decorators import supervisor_or_above
+from accounts.models import ROLE_ADMIN
 from .forms import (
     CustomerForm,
     JobOrderForm,
@@ -139,6 +142,39 @@ def order_detail(request, pk):
         'today': timezone.now().date(),
     }
     return render(request, 'orders/order_detail.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Order Delete (admin only)
+# ---------------------------------------------------------------------------
+
+@login_required
+def order_delete(request, pk):
+    """Permanently delete a job order and all its linked production jobs. Admin only."""
+    if request.user.role != ROLE_ADMIN:
+        return HttpResponseForbidden('<h1>403 Forbidden</h1><p>Admin access required.</p>')
+
+    order = get_object_or_404(JobOrder, pk=pk)
+
+    if request.method == 'POST':
+        order_number = order.order_number
+        with transaction.atomic():
+            # Explicitly delete linked production jobs (SET_NULL wouldn't remove them)
+            linked_jobs = order.production_jobs.all()
+            job_count = linked_jobs.count()
+            linked_jobs.delete()
+            order.delete()
+        messages.success(
+            request,
+            f'Order {order_number} and {job_count} linked production job(s) permanently deleted.',
+        )
+        return redirect('orders:order_list')
+
+    linked_jobs = order.production_jobs.select_related('current_stage').order_by('job_number')
+    return render(request, 'orders/order_confirm_delete.html', {
+        'order': order,
+        'linked_jobs': linked_jobs,
+    })
 
 
 # ---------------------------------------------------------------------------

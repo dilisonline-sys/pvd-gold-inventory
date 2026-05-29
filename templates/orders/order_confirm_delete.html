@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% block title %}Delete Order {{ order.order_number }}{% endblock %}
+{% block nav_orders %}active{% endblock %}
+{% block page_title %}Delete Order: {{ order.order_number }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white py-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                Confirm Permanent Deletion
+            </div>
+            <div class="card-body">
+                <p class="fw-semibold mb-1">You are about to permanently delete:</p>
+                <ul class="mb-3">
+                    <li>Order <strong>{{ order.order_number }}</strong> — {{ order.customer.name }}</li>
+                    {% if linked_jobs %}
+                    <li>
+                        <strong>{{ linked_jobs|length }} linked production job{{ linked_jobs|length|pluralize }}</strong>
+                        and all their stage records, QC checks, and material issuances
+                    </li>
+                    {% endif %}
+                    <li>All notes attached to this order</li>
+                </ul>
+
+                {% if linked_jobs %}
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm table-bordered align-middle small">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Job Number</th>
+                                <th>Title</th>
+                                <th>Stage</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in linked_jobs %}
+                            <tr>
+                                <td class="fw-semibold">{{ job.job_number }}</td>
+                                <td>{{ job.title|default:"—" }}</td>
+                                <td>{{ job.current_stage.name }}</td>
+                                <td>{{ job.get_status_display }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% endif %}
+
+                <div class="alert alert-danger small mb-4">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    This action <strong>cannot be undone</strong>. All data listed above will be permanently removed.
+                </div>
+
+                <div class="d-flex gap-3">
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash me-1"></i> Yes, Delete Everything
+                        </button>
+                    </form>
+                    <a href="{% url 'orders:order_detail' order.pk %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-1"></i> Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
