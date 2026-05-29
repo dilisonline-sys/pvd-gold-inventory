@@ -96,4 +96,35 @@
     </ul>
 </nav>
 {% endif %}
+
+<!-- Catalog Viewer Access -->
+{% if user.role == 'admin' %}
+<div class="card mt-4">
+    <div class="card-header d-flex align-items-center gap-2 py-3">
+        <i class="bi bi-shop" style="color:var(--gold);"></i>
+        <span>Catalog Viewer Access</span>
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            The product catalog at <a href="{% url 'catalog:gallery' %}" target="_blank">/catalog/</a> is
+            protected by a shared password. Anyone with this password can view all finished products in the catalog.
+            Last updated: {{ catalog_settings.updated_at|date:"d M Y, H:i" }}.
+        </p>
+        <form method="post" class="row g-2 align-items-end" style="max-width:480px;">
+            {% csrf_token %}
+            <div class="col-sm-8">
+                <label class="form-label small fw-semibold mb-1">New Catalog Password</label>
+                <input type="password" name="catalog_password" class="form-control form-control-sm"
+                       placeholder="Enter new password…" required minlength="6" autocomplete="new-password">
+                <div class="form-text">Minimum 6 characters. Share this with your showroom / clients.</div>
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-gold btn-sm w-100">
+                    <i class="bi bi-key me-1"></i> Update Password
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

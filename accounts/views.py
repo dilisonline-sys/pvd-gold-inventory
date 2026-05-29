@@ -59,10 +59,26 @@ def user_list(request):
     Display a paginated list of all users in the system.
     Accessible to Administrators only.
     """
+    from catalog.models import CatalogSettings
+
+    # Handle catalog password change POST
+    if request.method == 'POST' and request.user.role == 'admin':
+        new_password = request.POST.get('catalog_password', '').strip()
+        if new_password:
+            settings_obj = CatalogSettings.get()
+            settings_obj.set_password(new_password)
+            settings_obj.save()
+            messages.success(request, 'Catalog viewer password updated successfully.')
+        else:
+            messages.error(request, 'Password cannot be empty.')
+        return redirect('accounts:user_list')
+
+    catalog_settings = CatalogSettings.get()
     users = User.objects.all().order_by('username')
     context = {
         'users': users,
         'title': 'User Management',
+        'catalog_settings': catalog_settings,
     }
     return render(request, 'accounts/user_list.html', context)
 
