@@ -253,7 +253,30 @@ def stock_entry(request):
     else:
         form = StockEntryForm()
 
-    return render(request, 'inventory/stock_entry.html', {'form': form})
+    # Build material purity lookup for JS auto-fill: {pk: purity_value}
+    materials_purity = {
+        str(m.pk): m.metal_purity
+        for m in RawMaterial.objects.filter(is_active=True).only('pk', 'metal_purity')
+    }
+
+    # Suggest a batch number: BATCH-YYYYMMDD-NNN (NNN = today's entry count + 1)
+    today = timezone.now().date()
+    today_count = StockEntry.objects.filter(entry_date=today).count()
+    suggested_batch = f'BATCH-{today.strftime("%Y%m%d")}-{today_count + 1:03d}'
+
+    recent_entries = (
+        StockEntry.objects
+        .select_related('material', 'supplier', 'entered_by')
+        .order_by('-entry_date', '-id')[:10]
+    )
+
+    context = {
+        'form': form,
+        'materials_purity_json': json.dumps(materials_purity),
+        'suggested_batch': suggested_batch,
+        'recent_entries': recent_entries,
+    }
+    return render(request, 'inventory/stock_entry.html', context)
 
 
 @login_required

@@ -121,3 +121,36 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var materialEl  = document.getElementById('id_material');
+    var purityEl    = document.getElementById('id_purity');
+    var batchEl     = document.getElementById('id_batch_number');
+    var purityMap   = {{ materials_purity_json|safe }};
+    var suggested   = '{{ suggested_batch }}';
+
+    // Auto-fill batch number on load if empty
+    if (batchEl && !batchEl.value) {
+        batchEl.value = suggested;
+    }
+
+    // Auto-fill purity when material changes
+    if (materialEl && purityEl) {
+        function fillPurity() {
+            var pk     = materialEl.value;
+            var purity = purityMap[pk] || '';
+            if (purity) {
+                purityEl.value = purity;
+            } else {
+                purityEl.value = '';
+            }
+        }
+        materialEl.addEventListener('change', fillPurity);
+        // Run on load if a material is already selected (e.g. ?material=X from list page)
+        if (materialEl.value) fillPurity();
+    }
+})();
+</script>
+{% endblock %}
