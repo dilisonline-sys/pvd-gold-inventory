@@ -1,5 +1,7 @@
 import csv
 import io
+import json
+import urllib.request
 from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -7,6 +9,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import DecimalField, F, OuterRef, Q, Subquery, Sum
+from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -111,6 +114,11 @@ def dashboard(request):
         'recent_transactions': recent_transactions,
         'recent_entries_count': recent_entries_count,
         'shortfall_count': shortfall_count,
+        'prices_meta': [
+            ('gold', 'Gold', '#c9a84c'),
+            ('silver', 'Silver', '#808080'),
+            ('platinum', 'Platinum', '#6f86d6'),
+        ],
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -589,3 +597,50 @@ def low_stock_alerts(request):
         'shortfall_count': len(job_shortfalls),
     }
     return render(request, 'inventory/low_stock_alerts.html', context)
+
+
+# ---------------------------------------------------------------------------
+# Live Metal Prices API (proxies Yahoo Finance / Kitco-equivalent spot prices)
+# ---------------------------------------------------------------------------
+
+@login_required
+def metal_prices_api(request):
+    """Return live spot prices for gold, silver, platinum as JSON.
+
+    Prices are sourced from public futures data (same underlying market data
+    displayed on Kitco). Clients should cache and refresh on their own schedule.
+    """
+    _SYMBOLS = {
+        'gold':     'GC=F',
+        'silver':   'SI=F',
+        'platinum': 'PL=F',
+    }
+    prices = {}
+    for metal, symbol in _SYMBOLS.items():
+        try:
+            url = f'https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval=1m&range=1d'
+            req = urllib.request.Request(
+                url,
+                headers={'User-Agent': 'Mozilla/5.0 (compatible; pvd-goldsmith/1.0)'},
+            )
+            with urllib.request.urlopen(req, timeout=6) as resp:
+                data = json.loads(resp.read())
+            meta = data['chart']['result'][0]['meta']
+            price = float(meta.get('regularMarketPrice') or meta.get('previousClose', 0))
+            prev  = float(meta.get('chartPreviousClose') or meta.get('previousClose', price))
+            change = round(price - prev, 2)
+            change_pct = round((change / prev * 100) if prev else 0, 2)
+            prices[metal] = {
+                'price': round(price, 2),
+                'change': change,
+                'change_pct': change_pct,
+                'currency': 'USD',
+                'unit': 'troy oz',
+            }
+        except Exception:
+            prices[metal] = None
+
+    return JsonResponse({
+        'prices': prices,
+        'fetched_at': timezone.now().isoformat(),
+    })

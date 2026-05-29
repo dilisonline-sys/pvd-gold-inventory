@@ -28,4 +28,7 @@ urlpatterns = [
 
     # Alerts
     path('alerts/low-stock/', views.low_stock_alerts, name='low_stock_alerts'),
+
+    # Live metal prices (JSON)
+    path('api/metal-prices/', views.metal_prices_api, name='metal_prices_api'),
 ]

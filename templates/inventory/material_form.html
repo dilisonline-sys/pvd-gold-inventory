@@ -81,3 +81,48 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    var nameEl   = document.getElementById('id_name');
+    var catEl    = document.getElementById('id_category');
+    var typeEl   = document.getElementById('id_metal_type');
+    var purityEl = document.getElementById('id_metal_purity');
+
+    if (!nameEl || !catEl || !typeEl || !purityEl) return;
+
+    var purityShort = {
+        '9K': '9K', '10K': '10K', '14K': '14K', '18K': '18K',
+        '22K': '22K', '24K': '24K',
+        '925Silver': '925', '950Platinum': '950', 'Other': ''
+    };
+
+    var lastAuto = nameEl.value;
+
+    function buildName() {
+        var metalType = typeEl.value;
+        var purityVal = purityEl.value;
+        var catOpt    = catEl.options[catEl.selectedIndex];
+        var catText   = catOpt ? catOpt.text.trim() : '';
+        if (catText === '---------' || catText.indexOf('—') === 0) catText = '';
+        var base      = metalType || catText;
+        var pLabel    = (purityShort[purityVal] !== undefined) ? purityShort[purityVal] : '';
+        return pLabel ? base + ' ' + pLabel : base;
+    }
+
+    function autoFill() {
+        if (nameEl.value === '' || nameEl.value === lastAuto) {
+            var gen  = buildName();
+            nameEl.value = gen;
+            lastAuto     = gen;
+        }
+    }
+
+    catEl.addEventListener('change', autoFill);
+    typeEl.addEventListener('change', autoFill);
+    purityEl.addEventListener('change', autoFill);
+    {% if not object %}autoFill();{% endif %}
+})();
+</script>
+{% endblock %}

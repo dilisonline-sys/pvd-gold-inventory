@@ -14,6 +14,8 @@ from .models import (
     Supplier,
 )
 
+_PURITY_CHOICES_WITH_BLANK = [('', '— None —')] + [c for c in METAL_PURITY_CHOICES if c[0]]
+
 
 # ---------------------------------------------------------------------------
 # MaterialForm
@@ -94,9 +96,7 @@ class StockEntryForm(forms.ModelForm):
                 attrs={'class': 'form-control', 'type': 'date'}
             ),
             'batch_number': forms.TextInput(attrs={'class': 'form-control'}),
-            'purity': forms.TextInput(
-                attrs={'class': 'form-control', 'placeholder': 'e.g. 18k, 22k, 24k, 999'}
-            ),
+            'purity': forms.Select(attrs={'class': 'form-select'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
@@ -107,6 +107,12 @@ class StockEntryForm(forms.ModelForm):
         )
         self.fields['supplier'].queryset = Supplier.objects.filter(is_active=True)
         self.fields['supplier'].required = False
+        self.fields['purity'] = forms.ChoiceField(
+            choices=_PURITY_CHOICES_WITH_BLANK,
+            required=False,
+            label='Purity',
+            widget=forms.Select(attrs={'class': 'form-select'}),
+        )
 
     def clean_quantity(self):
         qty = self.cleaned_data.get('quantity')

@@ -60,6 +60,27 @@
     </div>
 </div>
 
+<!-- Live Metal Prices -->
+<div class="card mb-4" id="metal-prices-card">
+    <div class="card-header d-flex justify-content-between align-items-center py-3">
+        <span><i class="bi bi-graph-up me-2" style="color:var(--gold);"></i>Live Spot Prices <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">per troy oz · USD</span></span>
+        <span class="text-muted small" id="prices-updated">Loading…</span>
+    </div>
+    <div class="card-body py-3">
+        <div class="row g-3 text-center" id="prices-row">
+            {% for metal, label, icon_color in prices_meta %}
+            <div class="col-sm-4">
+                <div class="p-3 rounded" style="background:rgba(201,168,76,0.07);border:1px solid rgba(201,168,76,0.2);">
+                    <div class="text-muted small fw-semibold text-uppercase letter-spacing-1">{{ label }}</div>
+                    <div class="fw-bold fs-4 mt-1" id="price-{{ metal }}" style="color:var(--gold-dark);">—</div>
+                    <div class="small mt-1" id="change-{{ metal }}">—</div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
 {% if shortfall_count %}
 <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2 fs-5 flex-shrink-0"></i>
@@ -147,4 +168,54 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const API_URL = "{% url 'inventory:metal_prices_api' %}";
+    const REFRESH_MS = 5 * 60 * 1000;
+
+    function fmt(n, dec) {
+        return n != null ? n.toFixed(dec).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '—';
+    }
+
+    function renderPrices(data) {
+        ['gold', 'silver', 'platinum'].forEach(function (metal) {
+            var info = data.prices[metal];
+            var priceEl = document.getElementById('price-' + metal);
+            var changeEl = document.getElementById('change-' + metal);
+            if (!info) {
+                if (priceEl) priceEl.textContent = 'N/A';
+                if (changeEl) changeEl.textContent = '';
+                return;
+            }
+            if (priceEl) priceEl.textContent = '$' + fmt(info.price, 2);
+            if (changeEl) {
+                var sign = info.change >= 0 ? '+' : '';
+                var cls = info.change >= 0 ? 'text-success' : 'text-danger';
+                changeEl.innerHTML = '<span class="' + cls + '">' + sign + fmt(info.change, 2) + ' (' + sign + fmt(info.change_pct, 2) + '%)</span>';
+            }
+        });
+        var updEl = document.getElementById('prices-updated');
+        if (updEl) {
+            var d = new Date(data.fetched_at);
+            updEl.textContent = 'Updated ' + d.toLocaleTimeString();
+        }
+    }
+
+    function fetchPrices() {
+        fetch(API_URL)
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(renderPrices)
+            .catch(function () {
+                var updEl = document.getElementById('prices-updated');
+                if (updEl) updEl.textContent = 'Could not load prices';
+            });
+    }
+
+    fetchPrices();
+    setInterval(fetchPrices, REFRESH_MS);
+})();
+</script>
 {% endblock %}
