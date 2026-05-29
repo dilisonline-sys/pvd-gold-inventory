@@ -461,6 +461,7 @@ def job_detail(request, pk):
         'requirements': requirements,
         'requirement_form': requirement_form,
         'current_record': current_record,
+        'all_stages': all_stages,
         'timeline': timeline,
         'can_manage': can_manage,
         'can_update': can_update,
