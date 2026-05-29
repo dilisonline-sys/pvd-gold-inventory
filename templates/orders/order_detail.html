@@ -61,7 +61,7 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-gear-wide-connected me-2" style="color:var(--gold);"></i>Production Jobs</span>
         {% if user.role in 'admin,manager,supervisor' %}
-        <a href="{% url 'manufacturing:job_create' %}" class="btn btn-sm btn-gold">
+        <a href="{% url 'manufacturing:job_create' %}?order={{ order.pk }}" class="btn btn-sm btn-gold">
           <i class="bi bi-plus-lg me-1"></i>New Job
         </a>
         {% endif %}
@@ -126,7 +126,7 @@
         No production jobs linked to this order yet.
         {% if user.role in 'admin,manager,supervisor' %}
         <div class="mt-2">
-          <a href="{% url 'manufacturing:job_create' %}" class="btn btn-sm btn-gold">
+          <a href="{% url 'manufacturing:job_create' %}?order={{ order.pk }}" class="btn btn-sm btn-gold">
             <i class="bi bi-plus-lg me-1"></i>Create Production Job
           </a>
         </div>

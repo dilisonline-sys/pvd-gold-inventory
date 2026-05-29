@@ -71,6 +71,29 @@
                         </a>
                     </div>
                 </form>
+
+                {% if orders_json %}
+                <script>
+                (function () {
+                    var ordersData = {{ orders_json|safe }};
+                    var orderSelect = document.getElementById('id_job_order');
+                    var descField  = document.getElementById('id_description');
+                    var titleField = document.getElementById('id_title');
+                    if (!orderSelect) return;
+                    orderSelect.addEventListener('change', function () {
+                        var pk = this.value;
+                        if (pk && ordersData[pk]) {
+                            if (descField && !descField.value.trim()) {
+                                descField.value = ordersData[pk].description;
+                            }
+                            if (titleField && !titleField.value.trim()) {
+                                titleField.value = ordersData[pk].title;
+                            }
+                        }
+                    });
+                })();
+                </script>
+                {% endif %}
             </div>
         </div>
     </div>

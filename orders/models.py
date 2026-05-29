@@ -236,6 +236,8 @@ class JobOrder(models.Model):
     estimated_cost = models.DecimalField(
         max_digits=14,
         decimal_places=2,
+        null=True,
+        blank=True,
         verbose_name='Estimated Cost',
     )
     actual_cost = models.DecimalField(
@@ -303,6 +305,8 @@ class JobOrder(models.Model):
     def balance_due(self):
         """Balance due = (actual_cost or estimated_cost) minus advance_payment."""
         cost = self.actual_cost if self.actual_cost is not None else self.estimated_cost
+        if cost is None:
+            return Decimal('0.00')
         return cost - self.advance_payment
 
     @property

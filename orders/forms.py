@@ -95,6 +95,15 @@ class JobOrderForm(forms.ModelForm):
         self.fields['customer'].queryset = Customer.objects.filter(is_active=True)
         self.fields['stone_type'].required = False
         self.fields['stone_weight'].required = False
+        self.fields['estimated_cost'].required = False
+        self.fields['advance_payment'].required = False
+
+    def clean_advance_payment(self):
+        val = self.cleaned_data.get('advance_payment')
+        if val is None:
+            from decimal import Decimal
+            return Decimal('0.00')
+        return val
 
     def clean(self):
         cleaned = super().clean()

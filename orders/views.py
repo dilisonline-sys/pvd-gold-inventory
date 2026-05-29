@@ -1,3 +1,5 @@
+import re
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
@@ -8,6 +10,46 @@ from django.utils import timezone
 
 from accounts.decorators import supervisor_or_above
 from accounts.models import ROLE_ADMIN
+
+
+def _check_metal_stock(order):
+    """Return (in_stock: bool, warning_msg: str | None) for the order's metal type + purity."""
+    from inventory.models import RawMaterial
+
+    metal_kw = order.metal_type  # 'Gold', 'Silver', 'Platinum', 'Other'
+    purity_raw = order.metal_purity  # '18K', '925Silver', '950Platinum', etc.
+
+    # Derive a search keyword from purity
+    if purity_raw in ('Other', ''):
+        purity_kw = None
+    elif purity_raw.endswith('Silver') or purity_raw.endswith('Platinum'):
+        m = re.match(r'^(\d+)', purity_raw)
+        purity_kw = m.group(1) if m else None  # '925', '950'
+    else:
+        purity_kw = purity_raw  # '18K', '22K', etc.
+
+    qs = RawMaterial.objects.filter(is_active=True, name__icontains=metal_kw)
+    if purity_kw:
+        qs = qs.filter(name__icontains=purity_kw)
+    qs = qs.select_related('current_stock')
+
+    matching = list(qs)
+    if not matching:
+        label = f'{order.get_metal_type_display()} {order.metal_purity}'
+        return False, (
+            f'No raw material found in inventory for {label}. '
+            'Please add stock before starting production.'
+        )
+
+    in_stock = [m for m in matching if m.get_current_stock() > 0]
+    if not in_stock:
+        names = ', '.join(m.name for m in matching)
+        return False, (
+            f'Stock alert: {names} is at zero. '
+            'Replenish inventory before starting production for this order.'
+        )
+
+    return True, None
 from .forms import (
     CustomerForm,
     JobOrderForm,
@@ -95,6 +137,10 @@ def order_create(request):
                 request,
                 f'Job order {order.order_number} created successfully.'
             )
+            # Warn if required metal/purity is not in stock
+            in_stock, warning = _check_metal_stock(order)
+            if warning:
+                messages.warning(request, warning)
             return redirect('orders:order_detail', pk=order.pk)
     else:
         form = JobOrderForm()

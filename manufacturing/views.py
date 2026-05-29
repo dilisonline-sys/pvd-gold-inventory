@@ -213,10 +213,31 @@ def job_list(request):
 # Job Create
 # ---------------------------------------------------------------------------
 
+def _job_description_from_order(order):
+    """Generate a pre-filled description string from a linked job order."""
+    parts = [
+        f"Order: {order.order_number}",
+        f"Customer: {order.customer.name}",
+        f"Item: {order.item_type} × {order.quantity}",
+        f"Metal: {order.get_metal_type_display()} {order.metal_purity}",
+        f"Est. Weight: {order.estimated_weight}g",
+    ]
+    if order.stone_type:
+        stone_line = f"Stones: {order.stone_type}"
+        if order.stone_weight:
+            stone_line += f" ({order.stone_weight}ct)"
+        parts.append(stone_line)
+    if order.special_instructions:
+        parts.append(f"Instructions: {order.special_instructions}")
+    return "\n".join(parts)
+
+
 @login_required
 @supervisor_or_above
 def job_create(request):
     """Create a new production job. Supervisor and above only."""
+    from orders.models import JobOrder
+
     if request.method == 'POST':
         form = ProductionJobForm(request.POST)
         if form.is_valid():
@@ -232,12 +253,39 @@ def job_create(request):
             )
             return redirect('manufacturing:job_detail', pk=job.pk)
     else:
-        form = ProductionJobForm()
+        initial = {}
+        # Pre-fill from linked order when navigating from order detail
+        order_pk = request.GET.get('order')
+        if order_pk:
+            try:
+                linked_order = JobOrder.objects.select_related('customer', 'item_type').get(pk=order_pk)
+                initial['job_order'] = linked_order.pk
+                initial['description'] = _job_description_from_order(linked_order)
+                initial['title'] = f"{linked_order.item_type} — {linked_order.order_number}"
+            except JobOrder.DoesNotExist:
+                pass
+        form = ProductionJobForm(initial=initial)
+
+    # Provide order data for JS auto-fill when user changes the order select
+    open_orders = (
+        JobOrder.objects
+        .select_related('customer', 'item_type')
+        .exclude(status__in=('DELIVERED', 'CANCELLED'))
+        .order_by('-order_date')
+    )
+    import json
+    orders_json = json.dumps({
+        str(o.pk): {
+            'description': _job_description_from_order(o),
+            'title': f"{o.item_type} — {o.order_number}",
+        }
+        for o in open_orders
+    })
 
     return render(
         request,
         'manufacturing/job_form.html',
-        {'form': form, 'action': 'Create'},
+        {'form': form, 'action': 'Create', 'orders_json': orders_json},
     )
 
 
