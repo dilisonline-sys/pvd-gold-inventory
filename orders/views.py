@@ -13,32 +13,45 @@ from accounts.models import ROLE_ADMIN
 
 
 def _check_metal_stock(order):
-    """Return (in_stock: bool, warning_msg: str | None) for the order's metal type + purity."""
+    """Return (in_stock: bool, warning_msg: str | None) for the order's metal type + purity.
+
+    First queries by the new metal_type / metal_purity fields on RawMaterial;
+    falls back to name-based search for legacy records that haven't been tagged yet.
+    """
     from inventory.models import RawMaterial
 
-    metal_kw = order.metal_type  # 'Gold', 'Silver', 'Platinum', 'Other'
-    purity_raw = order.metal_purity  # '18K', '925Silver', '950Platinum', etc.
+    metal_type = order.metal_type    # 'Gold', 'Silver', 'Platinum', 'Other'
+    metal_purity = order.metal_purity  # '18K', '925Silver', etc.
 
-    # Derive a search keyword from purity
-    if purity_raw in ('Other', ''):
-        purity_kw = None
-    elif purity_raw.endswith('Silver') or purity_raw.endswith('Platinum'):
-        m = re.match(r'^(\d+)', purity_raw)
-        purity_kw = m.group(1) if m else None  # '925', '950'
-    else:
-        purity_kw = purity_raw  # '18K', '22K', etc.
+    if metal_type == 'Other':
+        return True, None
 
-    qs = RawMaterial.objects.filter(is_active=True, name__icontains=metal_kw)
-    if purity_kw:
-        qs = qs.filter(name__icontains=purity_kw)
-    qs = qs.select_related('current_stock')
+    # --- primary: match by structured fields ---
+    qs = RawMaterial.objects.filter(is_active=True, metal_type=metal_type)
+    if metal_purity != 'Other':
+        qs = qs.filter(metal_purity=metal_purity)
+    matching = list(qs.select_related('current_stock'))
 
-    matching = list(qs)
+    # --- fallback: name-based search for untagged legacy materials ---
     if not matching:
-        label = f'{order.get_metal_type_display()} {order.metal_purity}'
+        if metal_purity in ('Other', ''):
+            purity_kw = None
+        elif metal_purity.endswith('Silver') or metal_purity.endswith('Platinum'):
+            m = re.match(r'^(\d+)', metal_purity)
+            purity_kw = m.group(1) if m else None
+        else:
+            purity_kw = metal_purity
+
+        qs_name = RawMaterial.objects.filter(is_active=True, name__icontains=metal_type)
+        if purity_kw:
+            qs_name = qs_name.filter(name__icontains=purity_kw)
+        matching = list(qs_name.select_related('current_stock'))
+
+    if not matching:
+        label = f'{order.get_metal_type_display()} {order.get_metal_purity_display()}'
         return False, (
             f'No raw material found in inventory for {label}. '
-            'Please add stock before starting production.'
+            'Add this material and set its Metal Type & Purity before starting production.'
         )
 
     in_stock = [m for m in matching if m.get_current_stock() > 0]

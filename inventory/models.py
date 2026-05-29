@@ -23,6 +23,43 @@ UNIT_CHOICES = [
     (UNIT_KG, 'Kilograms'),
 ]
 
+# Metal type / purity choices — same values used on the Order form
+METAL_TYPE_GOLD = 'Gold'
+METAL_TYPE_SILVER = 'Silver'
+METAL_TYPE_PLATINUM = 'Platinum'
+METAL_TYPE_OTHER = 'Other'
+
+METAL_TYPE_CHOICES = [
+    ('', '— None —'),
+    (METAL_TYPE_GOLD, 'Gold'),
+    (METAL_TYPE_SILVER, 'Silver'),
+    (METAL_TYPE_PLATINUM, 'Platinum'),
+    (METAL_TYPE_OTHER, 'Other'),
+]
+
+PURITY_9K = '9K'
+PURITY_10K = '10K'
+PURITY_14K = '14K'
+PURITY_18K = '18K'
+PURITY_22K = '22K'
+PURITY_24K = '24K'
+PURITY_925 = '925Silver'
+PURITY_950 = '950Platinum'
+PURITY_OTHER = 'Other'
+
+METAL_PURITY_CHOICES = [
+    ('', '— None —'),
+    (PURITY_9K, '9K'),
+    (PURITY_10K, '10K'),
+    (PURITY_14K, '14K'),
+    (PURITY_18K, '18K'),
+    (PURITY_22K, '22K'),
+    (PURITY_24K, '24K'),
+    (PURITY_925, '925 Silver'),
+    (PURITY_950, '950 Platinum'),
+    (PURITY_OTHER, 'Other'),
+]
+
 TRANSACTION_IN = 'IN'
 TRANSACTION_OUT = 'OUT'
 TRANSACTION_ADJUSTMENT = 'ADJUSTMENT'
@@ -93,6 +130,22 @@ class RawMaterial(models.Model):
         choices=UNIT_CHOICES,
         default=UNIT_GRAMS,
         verbose_name='Unit of Measure',
+    )
+    metal_type = models.CharField(
+        max_length=20,
+        choices=METAL_TYPE_CHOICES,
+        blank=True,
+        default='',
+        verbose_name='Metal Type',
+        help_text='Set for Gold, Silver, or Platinum materials to enable order stock checks.',
+    )
+    metal_purity = models.CharField(
+        max_length=20,
+        choices=METAL_PURITY_CHOICES,
+        blank=True,
+        default='',
+        verbose_name='Metal Purity',
+        help_text='e.g. 18K, 22K, 925 Silver. Must match the purity used on orders.',
     )
     description = models.TextField(blank=True, verbose_name='Description')
     minimum_stock_level = models.DecimalField(

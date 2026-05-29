@@ -8,26 +8,44 @@
 <div class="card mb-4">
     <div class="card-body py-3">
         <form method="get" class="row g-2 align-items-end">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label class="form-label small fw-semibold">Search</label>
                 <div class="input-group">
                     <span class="input-group-text"><i class="bi bi-search"></i></span>
-                    <input type="text" name="q" class="form-control" placeholder="Material name..." value="{{ request.GET.q }}">
+                    <input type="text" name="q" class="form-control" placeholder="Material name..." value="{{ search }}">
                 </div>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label class="form-label small fw-semibold">Category</label>
                 <select name="category" class="form-select">
-                    <option value="">All Categories</option>
+                    <option value="">All</option>
                     {% for cat in categories %}
-                    <option value="{{ cat }}" {% if request.GET.category == cat %}selected{% endif %}>{{ cat }}</option>
+                    <option value="{{ cat }}" {% if category_filter == cat.name %}selected{% endif %}>{{ cat }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div class="col-md-2">
-                <button type="submit" class="btn btn-gold w-100"><i class="bi bi-funnel me-1"></i>Filter</button>
+                <label class="form-label small fw-semibold">Metal Type</label>
+                <select name="metal_type" class="form-select">
+                    <option value="">All</option>
+                    {% for val, label in metal_type_choices %}
+                    <option value="{{ val }}" {% if metal_type_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="col-md-2">
+                <label class="form-label small fw-semibold">Purity</label>
+                <select name="purity" class="form-select">
+                    <option value="">All</option>
+                    {% for val, label in metal_purity_choices %}
+                    <option value="{{ val }}" {% if purity_filter == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-gold w-100"><i class="bi bi-funnel"></i></button>
+            </div>
+            <div class="col-md-1">
                 <a href="{% url 'inventory:material_list' %}" class="btn btn-outline-secondary w-100">Clear</a>
             </div>
         </form>
@@ -47,11 +65,12 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
+            <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
                         <th>Name</th>
                         <th>Category</th>
+                        <th>Metal / Purity</th>
                         <th>Unit</th>
                         <th>Current Stock</th>
                         <th>Min. Level</th>
@@ -65,10 +84,20 @@
                         <td>
                             <div class="fw-semibold">{{ material.name }}</div>
                             {% if material.description %}
-                            <div class="text-muted small">{{ material.description|truncatechars:50 }}</div>
+                            <div class="text-muted" style="font-size:0.77rem;">{{ material.description|truncatechars:50 }}</div>
                             {% endif %}
                         </td>
                         <td><span class="badge" style="background:var(--gold-light);color:#6b4c00;">{{ material.category }}</span></td>
+                        <td>
+                            {% if material.metal_type %}
+                                <span class="badge bg-secondary">{{ material.metal_type }}</span>
+                                {% if material.metal_purity %}
+                                <span class="badge bg-light text-dark border">{{ material.get_metal_purity_display }}</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
                         <td>{{ material.unit_of_measure }}</td>
                         <td class="fw-semibold">{{ material.get_current_stock|floatformat:2 }}</td>
                         <td class="text-muted">{{ material.minimum_stock_level|floatformat:2 }}</td>
@@ -79,7 +108,7 @@
                                 <span class="badge bg-success">OK</span>
                             {% endif %}
                         </td>
-                        <td class="text-end">
+                        <td class="text-end text-nowrap">
                             <a href="{% url 'inventory:stock_entry' %}?material={{ material.pk }}" class="btn btn-sm btn-outline-success" title="Stock Entry">
                                 <i class="bi bi-plus-square"></i>
                             </a>
@@ -92,7 +121,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-5">
+                        <td colspan="8" class="text-center text-muted py-5">
                             <i class="bi bi-layers fs-2 d-block mb-2"></i>No materials found.
                         </td>
                     </tr>
@@ -107,15 +136,15 @@
 <nav class="mt-3">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q }}&category={{ request.GET.category }}"><i class="bi bi-chevron-left"></i></a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search }}&category={{ category_filter }}&metal_type={{ metal_type_filter }}&purity={{ purity_filter }}"><i class="bi bi-chevron-left"></i></a></li>
         {% endif %}
         {% for num in page_obj.paginator.page_range %}
         <li class="page-item {% if page_obj.number == num %}active{% endif %}">
-            <a class="page-link" href="?page={{ num }}&q={{ request.GET.q }}&category={{ request.GET.category }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&q={{ search }}&category={{ category_filter }}&metal_type={{ metal_type_filter }}&purity={{ purity_filter }}">{{ num }}</a>
         </li>
         {% endfor %}
         {% if page_obj.has_next %}
-        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q }}&category={{ request.GET.category }}"><i class="bi bi-chevron-right"></i></a></li>
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search }}&category={{ category_filter }}&metal_type={{ metal_type_filter }}&purity={{ purity_filter }}"><i class="bi bi-chevron-right"></i></a></li>
         {% endif %}
     </ul>
 </nav>

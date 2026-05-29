@@ -4,7 +4,15 @@ import io
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import MaterialCategory, RawMaterial, StockEntry, StockTransaction, Supplier
+from .models import (
+    MaterialCategory,
+    METAL_PURITY_CHOICES,
+    METAL_TYPE_CHOICES,
+    RawMaterial,
+    StockEntry,
+    StockTransaction,
+    Supplier,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -17,6 +25,8 @@ class MaterialForm(forms.ModelForm):
         fields = [
             'name',
             'category',
+            'metal_type',
+            'metal_purity',
             'unit_of_measure',
             'description',
             'minimum_stock_level',
@@ -25,6 +35,8 @@ class MaterialForm(forms.ModelForm):
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'metal_type': forms.Select(attrs={'class': 'form-select'}),
+            'metal_purity': forms.Select(attrs={'class': 'form-select'}),
             'unit_of_measure': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'minimum_stock_level': forms.NumberInput(

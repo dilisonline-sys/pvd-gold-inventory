@@ -30,6 +30,8 @@ from .forms import (
 )
 from .models import (
     CurrentStock,
+    METAL_PURITY_CHOICES,
+    METAL_TYPE_CHOICES,
     RawMaterial,
     StockEntry,
     StockTransaction,
@@ -126,19 +128,24 @@ def material_list(request):
         .order_by('category__name', 'name')
     )
 
-    # Optional search
-    search = request.GET.get('search', '').strip()
+    search = request.GET.get('q', '').strip()
     if search:
         materials = materials.filter(
             Q(name__icontains=search) | Q(category__name__icontains=search)
         )
 
-    # Optional category filter
     category_filter = request.GET.get('category', '').strip()
     if category_filter:
         materials = materials.filter(category__name=category_filter)
 
-    # Optional active filter
+    metal_type_filter = request.GET.get('metal_type', '').strip()
+    if metal_type_filter:
+        materials = materials.filter(metal_type=metal_type_filter)
+
+    purity_filter = request.GET.get('purity', '').strip()
+    if purity_filter:
+        materials = materials.filter(metal_purity=purity_filter)
+
     active_filter = request.GET.get('active', 'true')
     if active_filter == 'true':
         materials = materials.filter(is_active=True)
@@ -153,7 +160,11 @@ def material_list(request):
         'categories': categories,
         'search': search,
         'category_filter': category_filter,
+        'metal_type_filter': metal_type_filter,
+        'purity_filter': purity_filter,
         'active_filter': active_filter,
+        'metal_type_choices': METAL_TYPE_CHOICES[1:],  # skip blank entry
+        'metal_purity_choices': METAL_PURITY_CHOICES[1:],  # skip blank entry
     }
     return render(request, 'inventory/material_list.html', context)
 
