@@ -85,6 +85,11 @@ def production_dashboard(request):
         for stage in stages
     ]
 
+    # Counts by priority
+    priority_counts = {}
+    for value, label in PRIORITY_CHOICES:
+        priority_counts[value] = jobs.filter(priority=value).count()
+
     # Urgent/overdue jobs
     today = timezone.now().date()
     overdue_jobs = jobs.filter(
@@ -99,6 +104,7 @@ def production_dashboard(request):
         'recent_jobs': recent_jobs,
         'status_counts': status_counts,
         'stage_counts': stage_counts,
+        'priority_counts': priority_counts,
         'stages': stages,
         'overdue_jobs': overdue_jobs,
         'total_jobs': jobs.count(),
@@ -166,7 +172,7 @@ def job_list(request):
     status_filter = request.GET.get('status', '').strip()
     stage_filter = request.GET.get('stage', '').strip()
     priority_filter = request.GET.get('priority', '').strip()
-    search = request.GET.get('search', '').strip()
+    search = request.GET.get('q', '').strip()
 
     if status_filter:
         jobs = jobs.filter(status=status_filter)
@@ -181,10 +187,15 @@ def job_list(request):
             | Q(description__icontains=search)
         )
 
+    from django.core.paginator import Paginator
+    paginator = Paginator(jobs, 20)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
     stages = ProcessStage.objects.filter(is_active=True).order_by('order_number')
 
     context = {
-        'jobs': jobs,
+        'jobs': page_obj.object_list,
+        'page_obj': page_obj,
         'stages': stages,
         'job_status_choices': JOB_STATUS_CHOICES,
         'priority_choices': PRIORITY_CHOICES,
