@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Bulk Upload Catalog{% endblock %}
+{% block nav_final_products %}active{% endblock %}
+{% block page_title %}Bulk Upload Catalog{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+<div class="card mb-4">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-upload" style="color:var(--gold);"></i>
+        <span>Upload CSV File</span>
+    </div>
+    <div class="card-body">
+
+        {% if messages %}
+        {% for msg in messages %}
+        <div class="alert alert-{{ msg.tags|default:'info' }} alert-dismissible fade show">
+            {{ msg }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            <div class="mb-4">
+                <label class="form-label fw-semibold">{{ form.csv_file.label }}</label>
+                {{ form.csv_file }}
+                <div class="form-text">{{ form.csv_file.help_text }}</div>
+                {% if form.csv_file.errors %}
+                <div class="text-danger small mt-1">{{ form.csv_file.errors }}</div>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn btn-gold">
+                <i class="bi bi-upload me-1"></i> Import Products
+            </button>
+            <a href="{% url 'manufacturing:final_product_inventory' %}" class="btn btn-outline-secondary ms-2">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+
+<!-- CSV Format Guide -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-file-earmark-text me-2"></i>CSV Format Guide
+    </div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">
+            Your CSV file must have a header row. Only <strong>name</strong> is required; all other columns are optional.
+            Download the template below to get started.
+        </p>
+
+        <div class="table-responsive mb-3">
+            <table class="table table-sm table-bordered" style="font-size:0.82rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>Column</th>
+                        <th>Required</th>
+                        <th>Example</th>
+                        <th>Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>name</code></td><td><span class="badge bg-danger">Yes</span></td><td>Diamond Solitaire Ring</td><td>Product name</td></tr>
+                    <tr><td><code>job_ref</code></td><td><span class="badge bg-secondary">No</span></td><td>JOB-2025-001</td><td>Manual job/order reference</td></tr>
+                    <tr><td><code>metal_type</code></td><td><span class="badge bg-secondary">No</span></td><td>Gold</td><td>e.g. Gold, Silver, Platinum</td></tr>
+                    <tr><td><code>purity</code></td><td><span class="badge bg-secondary">No</span></td><td>18K</td><td>e.g. 18K, 22K, 925, 750</td></tr>
+                    <tr><td><code>final_weight</code></td><td><span class="badge bg-secondary">No</span></td><td>5.25</td><td>Weight in grams (decimal)</td></tr>
+                    <tr><td><code>finish</code></td><td><span class="badge bg-secondary">No</span></td><td>POLISHED</td><td>POLISHED, MATTE, BRUSHED, HAMMERED, SANDBLAST, OTHER</td></tr>
+                    <tr><td><code>stone_details</code></td><td><span class="badge bg-secondary">No</span></td><td>1ct round diamond</td><td>Free text</td></tr>
+                    <tr><td><code>hallmark</code></td><td><span class="badge bg-secondary">No</span></td><td>750 PVD</td><td>Hallmark or stamp text</td></tr>
+                    <tr><td><code>description</code></td><td><span class="badge bg-secondary">No</span></td><td>Classic solitaire…</td><td>Product description</td></tr>
+                    <tr><td><code>notes</code></td><td><span class="badge bg-secondary">No</span></td><td>Customer ref: C-42</td><td>Internal notes</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <a href="data:text/csv;charset=utf-8,name,job_ref,metal_type,purity,final_weight,finish,stone_details,hallmark,description,notes%0ASample%20Ring,JOB-2025-001,Gold,18K,5.25,POLISHED,1ct%20round%20diamond,750%20PVD,Classic%20solitaire%20ring,%0A"
+           download="catalog_template.csv"
+           class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-download me-1"></i> Download CSV Template
+        </a>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}

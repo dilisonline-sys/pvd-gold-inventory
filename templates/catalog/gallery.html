@@ -63,7 +63,7 @@
             </div>
             <div class="card-body">
                 <div class="product-name">{{ product.name }}</div>
-                <div class="product-meta mb-2">{{ product.production_job.job_number }}</div>
+                <div class="product-meta mb-2">{{ product.display_job_ref }}</div>
                 {% if product.metal_type %}
                 <span class="product-tag"><i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>{{ product.metal_type }}{% if product.purity %} {{ product.purity }}{% endif %}</span>
                 {% endif %}

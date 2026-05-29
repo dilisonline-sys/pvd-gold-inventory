@@ -56,7 +56,8 @@ def catalog_gallery(request):
         qs = qs.filter(finish=finish)
     if search:
         qs = qs.filter(name__icontains=search) | qs.filter(
-            production_job__job_number__icontains=search)
+            production_job__job_number__icontains=search) | qs.filter(
+            job_ref__icontains=search)
 
     paginator = Paginator(qs, 12)
     page = paginator.get_page(request.GET.get('page'))

@@ -1,15 +1,23 @@
 {% extends "base.html" %}
-{% block title %}Final Product Inventory{% endblock %}
+{% block title %}Catalog{% endblock %}
 {% block nav_final_products %}active{% endblock %}
-{% block page_title %}Final Product Inventory{% endblock %}
+{% block page_title %}Product Catalog{% endblock %}
 
 {% block content %}
 <!-- Header -->
 <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
-    <div class="text-muted small">{{ total }} product{{ total|pluralize }} recorded</div>
-    <div class="d-flex gap-2">
+    <div class="text-muted small">{{ total }} product{{ total|pluralize }} in catalog</div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if can_manage %}
+        <a href="{% url 'manufacturing:catalog_add' %}" class="btn btn-sm btn-gold">
+            <i class="bi bi-plus-lg me-1"></i> Add Product
+        </a>
+        <a href="{% url 'manufacturing:catalog_bulk_upload' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-upload me-1"></i> Bulk Upload CSV
+        </a>
+        {% endif %}
         <a href="{% url 'catalog:gallery' %}" target="_blank" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-eye me-1"></i> View Catalog
+            <i class="bi bi-eye me-1"></i> View Public Gallery
         </a>
     </div>
 </div>
@@ -21,7 +29,7 @@
             <div class="col-md-4">
                 <label class="form-label small fw-semibold mb-1">Search</label>
                 <input type="text" name="q" value="{{ filter_search }}" class="form-control form-control-sm"
-                       placeholder="Product name or job number…">
+                       placeholder="Product name or job reference…">
             </div>
             <div class="col-md-3">
                 <label class="form-label small fw-semibold mb-1">Metal Type</label>
@@ -65,10 +73,10 @@
                 {% else %}
                 <i class="bi bi-gem text-muted" style="font-size:3.5rem; opacity:0.25;"></i>
                 {% endif %}
-                <!-- Job number badge -->
+                <!-- Job reference badge -->
                 <div style="position:absolute; top:8px; left:8px;">
                     <span class="badge badge-stage" style="font-size:0.7rem;">
-                        {{ product.production_job.job_number }}
+                        {{ product.display_job_ref }}
                     </span>
                 </div>
             </div>
@@ -104,13 +112,15 @@
                     {{ product.created_at|date:"d M Y" }}
                 </div>
                 <div class="d-flex gap-1">
+                    {% if product.production_job %}
                     <a href="{% url 'manufacturing:job_detail' product.production_job.pk %}"
                        class="btn btn-sm btn-outline-secondary" title="View Job">
                         <i class="bi bi-box-arrow-up-right"></i>
                     </a>
+                    {% endif %}
                     {% if can_manage %}
-                    <a href="{% url 'manufacturing:final_product_create' product.production_job.pk %}"
-                       class="btn btn-sm btn-gold" title="Edit Product">
+                    <a href="{% url 'manufacturing:catalog_edit' product.pk %}"
+                       class="btn btn-sm btn-gold" title="Edit">
                         <i class="bi bi-pencil"></i>
                     </a>
                     {% endif %}
@@ -157,8 +167,13 @@
             No products match your filters.
             <a href="{% url 'manufacturing:final_product_inventory' %}">Clear filters</a>
             {% else %}
-            No final products have been recorded yet.<br>
-            <span class="small">Open a production job and click <strong>Record Final Product</strong> to get started.</span>
+            No products in the catalog yet.<br>
+            {% if can_manage %}
+            <span class="small">
+                <a href="{% url 'manufacturing:catalog_add' %}">Add a product</a> or
+                <a href="{% url 'manufacturing:catalog_bulk_upload' %}">bulk upload via CSV</a>.
+            </span>
+            {% endif %}
             {% endif %}
         </p>
     </div>

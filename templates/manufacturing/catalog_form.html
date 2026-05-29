@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block nav_final_products %}active{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-8">
+
+<div class="card">
+    <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-gem" style="color:var(--gold);"></i>
+        <span>{{ title }}</span>
+    </div>
+    <div class="card-body">
+
+        {% if product and product.image %}
+        <div class="mb-4 text-center">
+            <img src="{{ product.image.url }}" alt="{{ product.name }}"
+                 class="rounded shadow-sm"
+                 style="max-height:220px; max-width:100%; object-fit:cover; border:2px solid var(--gold-light);">
+            <div class="text-muted small mt-1">Current photo — upload a new file below to replace</div>
+        </div>
+        {% endif %}
+
+        <form method="post" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <!-- Product Identity -->
+            <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-2">Product Identity</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-8">
+                    <label class="form-label fw-semibold">Product Name <span class="text-danger">*</span></label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<div class="text-danger small mt-1">{{ form.name.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Job Reference</label>
+                    {{ form.job_ref }}
+                    <div class="form-text">Optional — e.g. JOB-2025-001</div>
+                    {% if form.job_ref.errors %}<div class="text-danger small mt-1">{{ form.job_ref.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <!-- Metal & Weight -->
+            <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Metal & Weight</h6>
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Metal Type</label>
+                    {{ form.metal_type }}
+                    {% if form.metal_type.errors %}<div class="text-danger small mt-1">{{ form.metal_type.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Purity / Karat</label>
+                    {{ form.purity }}
+                    {% if form.purity.errors %}<div class="text-danger small mt-1">{{ form.purity.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Final Weight (g)</label>
+                    {{ form.final_weight }}
+                    {% if form.final_weight.errors %}<div class="text-danger small mt-1">{{ form.final_weight.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <!-- Finish & Hallmark -->
+            <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Surface Finish</label>
+                    {{ form.finish }}
+                    {% if form.finish.errors %}<div class="text-danger small mt-1">{{ form.finish.errors }}</div>{% endif %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Hallmark / Stamp</label>
+                    {{ form.hallmark }}
+                    {% if form.hallmark.errors %}<div class="text-danger small mt-1">{{ form.hallmark.errors }}</div>{% endif %}
+                </div>
+            </div>
+
+            <!-- Stone Details -->
+            <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Stone & Gem Details</h6>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Stone / Gem Details</label>
+                {{ form.stone_details }}
+                {% if form.stone_details.errors %}<div class="text-danger small mt-1">{{ form.stone_details.errors }}</div>{% endif %}
+            </div>
+
+            <!-- Description & Notes -->
+            <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Description & Notes</h6>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}<div class="text-danger small mt-1">{{ form.description.errors }}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Additional Notes</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}<div class="text-danger small mt-1">{{ form.notes.errors }}</div>{% endif %}
+            </div>
+
+            <!-- Photo Upload -->
+            <h6 class="text-muted text-uppercase small fw-bold mb-3 mt-4">Product Photo</h6>
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Upload Image</label>
+                {{ form.image }}
+                <div class="form-text">Accepted: JPG, PNG, WEBP. Recommended: at least 800×800 px.</div>
+                {% if form.image.errors %}<div class="text-danger small mt-1">{{ form.image.errors }}</div>{% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-gold">
+                    <i class="bi bi-check-lg me-1"></i>{{ submit_label }}
+                </button>
+                <a href="{% url 'manufacturing:final_product_inventory' %}" class="btn btn-outline-secondary">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+</div>
+</div>
+{% endblock %}

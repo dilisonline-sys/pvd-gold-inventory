@@ -16,6 +16,7 @@ from accounts.models import (
 )
 
 from .forms import (
+    CatalogBulkUploadForm,
     FinalProductForm,
     MaterialIssuanceForm,
     ProcessRecordForm,
@@ -546,7 +547,8 @@ def final_product_inventory(request):
 
     if search:
         qs = qs.filter(name__icontains=search) | qs.filter(
-            production_job__job_number__icontains=search)
+            production_job__job_number__icontains=search) | qs.filter(
+            job_ref__icontains=search)
     if metal:
         qs = qs.filter(metal_type__icontains=metal)
     if finish:
@@ -566,3 +568,112 @@ def final_product_inventory(request):
         'total': qs.count(),
         'can_manage': _is_supervisor_or_above(request.user),
     })
+
+
+# ---------------------------------------------------------------------------
+# Catalog — standalone add / edit / bulk upload
+# ---------------------------------------------------------------------------
+
+@login_required
+def catalog_add(request):
+    """Add a new catalog entry without linking to a production job."""
+    if request.method == 'POST':
+        form = FinalProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            fp = form.save(commit=False)
+            fp.created_by = request.user
+            fp.save()
+            messages.success(request, f'"{fp.name}" added to the catalog.')
+            return redirect('manufacturing:final_product_inventory')
+    else:
+        form = FinalProductForm()
+
+    return render(request, 'manufacturing/catalog_form.html', {
+        'form': form,
+        'title': 'Add Catalog Entry',
+        'submit_label': 'Add to Catalog',
+    })
+
+
+@login_required
+@supervisor_or_above
+def catalog_edit(request, pk):
+    """Edit an existing catalog entry."""
+    product = get_object_or_404(FinalProduct, pk=pk)
+
+    if request.method == 'POST':
+        form = FinalProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'"{product.name}" updated.')
+            return redirect('manufacturing:final_product_inventory')
+    else:
+        form = FinalProductForm(instance=product)
+
+    return render(request, 'manufacturing/catalog_form.html', {
+        'form': form,
+        'product': product,
+        'title': f'Edit — {product.name}',
+        'submit_label': 'Save Changes',
+    })
+
+
+@login_required
+def catalog_bulk_upload(request):
+    """Upload a CSV file to bulk-create catalog entries."""
+    import csv
+    import io
+    from .models import PRODUCT_FINISH_CHOICES
+
+    VALID_FINISHES = {v for v, _ in PRODUCT_FINISH_CHOICES}
+    results = []
+
+    if request.method == 'POST':
+        form = CatalogBulkUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            csv_file = request.FILES['csv_file']
+            decoded = csv_file.read().decode('utf-8-sig')
+            reader = csv.DictReader(io.StringIO(decoded))
+
+            created = 0
+            errors = []
+            for row_num, row in enumerate(reader, start=2):
+                name = row.get('name', '').strip()
+                if not name:
+                    errors.append(f'Row {row_num}: "name" is required — skipped.')
+                    continue
+                finish = row.get('finish', '').strip().upper()
+                if finish and finish not in VALID_FINISHES:
+                    finish = 'POLISHED'
+
+                try:
+                    weight_raw = row.get('final_weight', '').strip()
+                    weight = float(weight_raw) if weight_raw else None
+                except ValueError:
+                    weight = None
+
+                FinalProduct.objects.create(
+                    name=name,
+                    job_ref=row.get('job_ref', '').strip(),
+                    metal_type=row.get('metal_type', '').strip(),
+                    purity=row.get('purity', '').strip(),
+                    final_weight=weight,
+                    finish=finish or 'POLISHED',
+                    stone_details=row.get('stone_details', '').strip(),
+                    hallmark=row.get('hallmark', '').strip(),
+                    description=row.get('description', '').strip(),
+                    notes=row.get('notes', '').strip(),
+                    created_by=request.user,
+                )
+                created += 1
+
+            if created:
+                messages.success(request, f'{created} product{"s" if created != 1 else ""} imported successfully.')
+            for err in errors:
+                messages.warning(request, err)
+            if created:
+                return redirect('manufacturing:final_product_inventory')
+    else:
+        form = CatalogBulkUploadForm()
+
+    return render(request, 'manufacturing/catalog_bulk_upload.html', {'form': form})

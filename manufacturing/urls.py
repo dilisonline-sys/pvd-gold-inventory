@@ -25,7 +25,12 @@ urlpatterns = [
     # Quality checks
     path('process-records/<int:record_pk>/quality-check/', views.quality_check_create, name='quality_check_create'),
 
-    # Final product
+    # Final product (job-linked — from job detail page)
     path('jobs/<int:pk>/final-product/', views.final_product_create, name='final_product_create'),
+
+    # Catalog (standalone entry, edit, bulk upload)
     path('final-products/', views.final_product_inventory, name='final_product_inventory'),
+    path('final-products/add/', views.catalog_add, name='catalog_add'),
+    path('final-products/<int:pk>/edit/', views.catalog_edit, name='catalog_edit'),
+    path('final-products/bulk-upload/', views.catalog_bulk_upload, name='catalog_bulk_upload'),
 ]

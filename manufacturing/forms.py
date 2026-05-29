@@ -184,17 +184,18 @@ class StageAdvanceForm(forms.Form):
 
 
 class FinalProductForm(forms.ModelForm):
-    """Record the finished product details and photo for a completed job."""
+    """Record the finished product details and photo for a catalog entry."""
 
     class Meta:
         model = FinalProduct
         fields = [
-            'name', 'description', 'metal_type', 'purity',
+            'name', 'job_ref', 'description', 'metal_type', 'purity',
             'final_weight', 'finish', 'stone_details', 'hallmark',
             'image', 'notes',
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'job_ref': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. JOB-2025-001'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'metal_type': forms.TextInput(attrs={'class': 'form-control'}),
             'purity': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'e.g. 18K, 22K, 925'}),
@@ -207,3 +208,12 @@ class FinalProductForm(forms.ModelForm):
             'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+
+class CatalogBulkUploadForm(forms.Form):
+    """Upload a CSV file to bulk-create catalog entries."""
+    csv_file = forms.FileField(
+        label='CSV File',
+        widget=forms.FileInput(attrs={'class': 'form-control', 'accept': '.csv'}),
+        help_text='Required columns: name. Optional: job_ref, metal_type, purity, final_weight, finish, stone_details, hallmark, description, notes',
+    )

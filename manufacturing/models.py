@@ -504,13 +504,21 @@ PRODUCT_FINISH_CHOICES = [
 
 
 class FinalProduct(models.Model):
-    """Records the finished product details and photo after the job completes all stages."""
+    """Catalog entry for a finished product — may be linked to a production job or standalone."""
 
     production_job = models.OneToOneField(
         ProductionJob,
         on_delete=models.CASCADE,
         related_name='final_product',
         verbose_name='Production Job',
+        null=True,
+        blank=True,
+    )
+    job_ref = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Job Reference',
+        help_text='Manual job/order reference when not linked to a production job.',
     )
     name = models.CharField(max_length=200, verbose_name='Product Name')
     description = models.TextField(blank=True, verbose_name='Description')
@@ -552,4 +560,11 @@ class FinalProduct(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.production_job.job_number} – {self.name}'
+        ref = self.production_job.job_number if self.production_job_id else (self.job_ref or '—')
+        return f'{ref} – {self.name}'
+
+    @property
+    def display_job_ref(self):
+        if self.production_job_id:
+            return self.production_job.job_number
+        return self.job_ref or '—'
