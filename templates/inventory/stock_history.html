@@ -61,9 +61,7 @@
                         <th>Material</th>
                         <th>Type</th>
                         <th>Quantity</th>
-                        <th>Unit Cost</th>
-                        <th>Supplier / Job</th>
-                        <th>Batch</th>
+                        <th>Reference / Job</th>
                         <th>Notes</th>
                         <th>By</th>
                     </tr>
@@ -72,14 +70,16 @@
                     {% for tx in transactions %}
                     <tr>
                         <td class="text-muted small text-nowrap">{{ tx.created_at|date:"d M Y, H:i" }}</td>
-                        <td class="fw-semibold">{{ tx.material.name }}</td>
+                        <td class="fw-semibold">{{ tx.material.name }}
+                            <div class="text-muted" style="font-size:0.75rem;">{{ tx.material.category }}</div>
+                        </td>
                         <td>
                             {% if tx.transaction_type == 'IN' %}
                                 <span class="badge bg-success">IN</span>
                             {% elif tx.transaction_type == 'OUT' %}
                                 <span class="badge bg-danger">OUT</span>
                             {% elif tx.transaction_type == 'ADJUSTMENT' %}
-                                <span class="badge bg-warning text-dark">ADJUSTMENT</span>
+                                <span class="badge bg-warning text-dark">ADJ</span>
                             {% elif tx.transaction_type == 'WASTE' %}
                                 <span class="badge bg-secondary">WASTE</span>
                             {% else %}
@@ -94,23 +94,23 @@
                             {% endif %}
                             <span class="text-muted small">{{ tx.material.unit_of_measure }}</span>
                         </td>
-                        <td class="text-muted small">{{ tx.unit_cost|floatformat:2|default:"—" }}</td>
                         <td class="text-muted small">
-                            {{ tx.supplier.name|default:"" }}
-                            {% if tx.production_job %}
-                                <a href="{% url 'manufacturing:job_detail' tx.production_job.pk %}" class="text-decoration-none" style="color:var(--gold);">
-                                    {{ tx.production_job.job_number }}
+                            {% if tx.reference_number %}
+                                <span class="font-monospace">{{ tx.reference_number }}</span>
+                            {% endif %}
+                            {% if tx.job_order %}
+                                <a href="{% url 'orders:order_detail' tx.job_order.pk %}" class="text-decoration-none" style="color:var(--gold);">
+                                    {{ tx.job_order.order_number }}
                                 </a>
                             {% endif %}
-                            {% if not tx.supplier and not tx.production_job %}—{% endif %}
+                            {% if not tx.reference_number and not tx.job_order %}—{% endif %}
                         </td>
-                        <td class="text-muted small">{{ tx.batch_number|default:"—" }}</td>
                         <td class="text-muted small text-truncate" style="max-width:150px;">{{ tx.notes|default:"—" }}</td>
                         <td class="text-muted small">{{ tx.created_by.get_full_name|default:tx.created_by.username|default:"—" }}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-5">
+                        <td colspan="7" class="text-center text-muted py-5">
                             <i class="bi bi-inbox fs-2 d-block mb-2"></i>No transactions found.
                         </td>
                     </tr>

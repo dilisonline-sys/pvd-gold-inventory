@@ -103,8 +103,8 @@
                                 </td>
                                 <td class="text-muted small">{{ entry.supplier.name|default:"—" }}</td>
                                 <td class="text-muted small">{{ entry.batch_number|default:"—" }}</td>
-                                <td class="text-muted small">{{ entry.created_at|date:"d M, H:i" }}</td>
-                                <td class="text-muted small">{{ entry.created_by.get_full_name|default:entry.created_by.username|default:"—" }}</td>
+                                <td class="text-muted small">{{ entry.entry_date|date:"d M Y" }}</td>
+                                <td class="text-muted small">{{ entry.entered_by.get_full_name|default:entry.entered_by.username|default:"—" }}</td>
                             </tr>
                             {% empty %}
                             <tr>

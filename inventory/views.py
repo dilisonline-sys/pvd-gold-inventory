@@ -415,12 +415,12 @@ def stock_history(request):
         .order_by('-created_at')
     )
 
-    # Filters
+    # Filters — param names must match the template form's name= attributes
     material_filter = request.GET.get('material', '').strip()
-    type_filter = request.GET.get('transaction_type', '').strip()
+    type_filter = request.GET.get('type', '').strip()
     date_from = request.GET.get('date_from', '').strip()
     date_to = request.GET.get('date_to', '').strip()
-    search = request.GET.get('search', '').strip()
+    search = request.GET.get('q', '').strip()
 
     if material_filter:
         transactions_qs = transactions_qs.filter(material__id=material_filter)
@@ -437,11 +437,17 @@ def stock_history(request):
             | Q(notes__icontains=search)
         )
 
+    from django.core.paginator import Paginator
     from .models import TRANSACTION_TYPE_CHOICES
+
     materials = RawMaterial.objects.filter(is_active=True).order_by('name')
 
+    paginator = Paginator(transactions_qs, 50)
+    page_obj = paginator.get_page(request.GET.get('page', 1))
+
     context = {
-        'transactions': transactions_qs,
+        'transactions': page_obj,
+        'page_obj': page_obj,
         'materials': materials,
         'transaction_type_choices': TRANSACTION_TYPE_CHOICES,
         'material_filter': material_filter,
