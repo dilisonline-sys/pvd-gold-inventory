@@ -2,7 +2,7 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-APP_VERSION = 'v1.10'
+APP_VERSION = 'v1.11'
 
 SECRET_KEY = "django-insecure-_hf7in912v&4c5-9xxv9(4fv-b7@6y)81ooiszmt9qd_gcf=go"
 
