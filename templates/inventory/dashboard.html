@@ -60,6 +60,17 @@
     </div>
 </div>
 
+{% if shortfall_count %}
+<div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2 fs-5 flex-shrink-0"></i>
+    <div>
+        <strong>{{ shortfall_count }} order shortfall{{ shortfall_count|pluralize }}</strong> —
+        active production jobs are waiting for materials not yet in stock.
+        <a href="{% url 'inventory:low_stock_alerts' %}" class="alert-link ms-1">View Details &rarr;</a>
+    </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
     <!-- Low Stock Alerts -->
     <div class="col-lg-5">

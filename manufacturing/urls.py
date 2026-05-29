@@ -22,6 +22,8 @@ urlpatterns = [
 
     # Materials
     path('jobs/<int:pk>/issue-materials/', views.issue_materials, name='issue_materials'),
+    path('jobs/<int:pk>/requirements/add/', views.requirement_add, name='requirement_add'),
+    path('requirements/<int:req_pk>/delete/', views.requirement_delete, name='requirement_delete'),
 
     # Quality checks
     path('process-records/<int:record_pk>/quality-check/', views.quality_check_create, name='quality_check_create'),

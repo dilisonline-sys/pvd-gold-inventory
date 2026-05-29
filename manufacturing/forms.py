@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from .models import (
     FinalProduct,
     MaterialIssuance,
+    MaterialRequirement,
     ProcessRecord,
     ProcessStage,
     ProductionJob,
@@ -208,6 +209,29 @@ class FinalProductForm(forms.ModelForm):
             'image': forms.FileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+
+class MaterialRequirementForm(forms.ModelForm):
+    """Add a material requirement to a production job."""
+
+    class Meta:
+        model = MaterialRequirement
+        fields = ['material', 'quantity_required', 'notes']
+        widgets = {
+            'material': forms.Select(attrs={'class': 'form-select'}),
+            'quantity_required': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.0001'}),
+            'notes': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Optional note'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from inventory.models import RawMaterial
+        self.fields['material'].queryset = (
+            RawMaterial.objects.filter(is_active=True)
+            .select_related('category')
+            .order_by('category__name', 'name')
+        )
+        self.fields['notes'].required = False
 
 
 class CatalogBulkUploadForm(forms.Form):

@@ -94,6 +94,13 @@ def dashboard(request):
     seven_days_ago = (timezone.now() - timedelta(days=7)).date()
     recent_entries_count = StockEntry.objects.filter(entry_date__gte=seven_days_ago).count()
 
+    # Count active-job material shortfalls
+    from manufacturing.models import MaterialRequirement
+    all_job_reqs = MaterialRequirement.objects.filter(
+        production_job__status__in=('PENDING', 'IN_PROGRESS', 'ON_HOLD')
+    ).select_related('material', 'material__current_stock')
+    shortfall_count = sum(1 for r in all_job_reqs if not r.is_available)
+
     context = {
         'total_materials': total_materials,
         'total_stock_value': total_stock_value,
@@ -101,6 +108,7 @@ def dashboard(request):
         'low_stock_items': low_stock_items[:5],
         'recent_transactions': recent_transactions,
         'recent_entries_count': recent_entries_count,
+        'shortfall_count': shortfall_count,
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -540,18 +548,33 @@ def supplier_edit(request, pk):
 
 @login_required
 def low_stock_alerts(request):
-    """Show all materials whose current stock is below the minimum level."""
+    """Show all materials below minimum level, plus shortfalls for active production jobs."""
+    from manufacturing.models import MaterialRequirement
+
     active_materials = (
         RawMaterial.objects
         .filter(is_active=True)
         .select_related('category', 'current_stock')
         .order_by('category__name', 'name')
     )
-
     low_stock = [m for m in active_materials if m.is_low_stock]
+
+    # Requirements for active jobs where current stock is insufficient
+    all_job_reqs = (
+        MaterialRequirement.objects
+        .filter(production_job__status__in=('PENDING', 'IN_PROGRESS', 'ON_HOLD'))
+        .select_related(
+            'material', 'material__current_stock', 'material__category',
+            'production_job', 'production_job__current_stage',
+        )
+        .order_by('production_job__job_number', 'material__category__name', 'material__name')
+    )
+    job_shortfalls = [r for r in all_job_reqs if not r.is_available]
 
     context = {
         'low_stock_items': low_stock,
         'count': len(low_stock),
+        'job_shortfalls': job_shortfalls,
+        'shortfall_count': len(job_shortfalls),
     }
     return render(request, 'inventory/low_stock_alerts.html', context)

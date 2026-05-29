@@ -408,6 +408,61 @@ class MaterialIssuance(models.Model):
 
 
 # ---------------------------------------------------------------------------
+# MaterialRequirement
+# ---------------------------------------------------------------------------
+
+class MaterialRequirement(models.Model):
+    """Planned material needed for a production job before issuance."""
+
+    production_job = models.ForeignKey(
+        ProductionJob,
+        on_delete=models.CASCADE,
+        related_name='material_requirements',
+        verbose_name='Production Job',
+    )
+    material = models.ForeignKey(
+        'inventory.RawMaterial',
+        on_delete=models.PROTECT,
+        related_name='material_requirements',
+        verbose_name='Material',
+    )
+    quantity_required = models.DecimalField(
+        max_digits=12,
+        decimal_places=4,
+        verbose_name='Quantity Required',
+    )
+    notes = models.CharField(max_length=200, blank=True, verbose_name='Notes')
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='material_requirements_created',
+        verbose_name='Added By',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Material Requirement'
+        verbose_name_plural = 'Material Requirements'
+        ordering = ['material__category__name', 'material__name']
+
+    def __str__(self):
+        return f'{self.production_job.job_number} needs {self.quantity_required} × {self.material.name}'
+
+    @property
+    def current_stock(self):
+        return self.material.get_current_stock()
+
+    @property
+    def is_available(self):
+        return self.current_stock >= self.quantity_required
+
+    @property
+    def shortfall(self):
+        diff = self.current_stock - self.quantity_required
+        return abs(diff) if diff < 0 else 0
+
+
+# ---------------------------------------------------------------------------
 # QualityCheck
 # ---------------------------------------------------------------------------
 

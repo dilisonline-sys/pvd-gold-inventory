@@ -4,6 +4,64 @@
 {% block page_title %}Low Stock Alerts{% endblock %}
 
 {% block content %}
+
+{% if job_shortfalls %}
+<div class="card mb-4" style="border-top:3px solid #dc3545;">
+    <div class="card-header py-3 d-flex align-items-center gap-2">
+        <i class="bi bi-box2-heart text-danger fs-5"></i>
+        <span class="fw-bold">Order Shortfalls</span>
+        <span class="badge bg-danger">{{ shortfall_count }}</span>
+        <span class="text-muted small ms-1">Active production jobs waiting for materials</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                    <tr>
+                        <th>Job</th>
+                        <th>Stage</th>
+                        <th>Material</th>
+                        <th class="text-end">Required</th>
+                        <th class="text-end">In Stock</th>
+                        <th class="text-end">Shortfall</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for req in job_shortfalls %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'manufacturing:job_detail' req.production_job.pk %}" class="fw-semibold text-decoration-none" style="color:var(--gold-dark);">
+                                {{ req.production_job.job_number }}
+                            </a>
+                            {% if req.production_job.title %}
+                            <div class="text-muted" style="font-size:0.76rem;">{{ req.production_job.title }}</div>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge badge-stage">{{ req.production_job.current_stage.name }}</span></td>
+                        <td>
+                            <div class="fw-semibold">{{ req.material.name }}</div>
+                            <div class="text-muted" style="font-size:0.76rem;">{{ req.material.category }}</div>
+                        </td>
+                        <td class="text-end text-nowrap">{{ req.quantity_required|floatformat:3 }} {{ req.material.unit_of_measure }}</td>
+                        <td class="text-end text-nowrap text-danger">{{ req.current_stock|floatformat:3 }} {{ req.material.unit_of_measure }}</td>
+                        <td class="text-end text-nowrap">
+                            <span class="badge bg-danger">{{ req.shortfall|floatformat:3 }} {{ req.material.unit_of_measure }}</span>
+                        </td>
+                        <td>
+                            <a href="{% url 'inventory:stock_entry' %}?material={{ req.material.pk }}" class="btn btn-sm btn-gold text-nowrap">
+                                <i class="bi bi-plus-square me-1"></i>Add Stock
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if low_stock_items %}
 <div class="d-flex align-items-center gap-2 mb-4">
     <span class="badge bg-danger fs-6">{{ low_stock_items|length }} item{{ low_stock_items|length|pluralize }} below minimum</span>

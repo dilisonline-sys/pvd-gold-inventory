@@ -19,6 +19,7 @@ from .forms import (
     CatalogBulkUploadForm,
     FinalProductForm,
     MaterialIssuanceForm,
+    MaterialRequirementForm,
     ProcessRecordForm,
     ProductionJobForm,
     QualityCheckForm,
@@ -33,6 +34,7 @@ from .models import (
     STATUS_COMPLETED,
     STATUS_IN_PROGRESS,
     MaterialIssuance,
+    MaterialRequirement,
     ProcessRecord,
     ProcessStage,
     ProductionJob,
@@ -275,6 +277,14 @@ def job_detail(request, pk):
         .order_by('-issued_at')
     )
 
+    # Material requirements for this job with availability status
+    requirements = (
+        job.material_requirements
+        .select_related('material', 'material__current_stock', 'material__category', 'created_by')
+        .order_by('material__category__name', 'material__name')
+    )
+    requirement_form = MaterialRequirementForm()
+
     # Current stage record (create if missing)
     current_record = _get_or_create_process_record(job, job.current_stage)
 
@@ -314,6 +324,8 @@ def job_detail(request, pk):
         'process_records': process_records,
         'qc_records': qc_records,
         'issuances': issuances,
+        'requirements': requirements,
+        'requirement_form': requirement_form,
         'current_record': current_record,
         'timeline': timeline,
         'can_manage': can_manage,
@@ -373,6 +385,40 @@ def job_delete(request, pk):
         return redirect('manufacturing:job_list')
 
     return render(request, 'manufacturing/job_confirm_delete.html', {'job': job})
+
+
+# ---------------------------------------------------------------------------
+# Material Requirements
+# ---------------------------------------------------------------------------
+
+@login_required
+@supervisor_or_above
+def requirement_add(request, pk):
+    """Add a material requirement to a production job."""
+    job = get_object_or_404(ProductionJob, pk=pk)
+
+    if request.method == 'POST':
+        form = MaterialRequirementForm(request.POST)
+        if form.is_valid():
+            req = form.save(commit=False)
+            req.production_job = job
+            req.created_by = request.user
+            req.save()
+            messages.success(request, f'Requirement added: {req.material.name}.')
+        else:
+            messages.error(request, 'Invalid data. Please check the form fields.')
+    return redirect('manufacturing:job_detail', pk=job.pk)
+
+
+@login_required
+@supervisor_or_above
+def requirement_delete(request, req_pk):
+    """Remove a material requirement."""
+    req = get_object_or_404(MaterialRequirement, pk=req_pk)
+    job_pk = req.production_job_id
+    req.delete()
+    messages.success(request, 'Material requirement removed.')
+    return redirect('manufacturing:job_detail', pk=job_pk)
 
 
 # ---------------------------------------------------------------------------
@@ -476,10 +522,29 @@ def issue_materials(request, pk):
                 issuance.production_job = job
                 issuance.issued_by = request.user
                 issuance.save()
+
+                # Deduct from inventory stock
+                from inventory.models import CurrentStock, StockTransaction, TRANSACTION_OUT
+                stock, _ = CurrentStock.objects.get_or_create(
+                    material=issuance.material,
+                    defaults={'quantity_on_hand': 0},
+                )
+                stock.quantity_on_hand -= issuance.quantity_issued
+                stock.save()
+
+                StockTransaction.objects.create(
+                    material=issuance.material,
+                    transaction_type=TRANSACTION_OUT,
+                    quantity=issuance.quantity_issued,
+                    reference_number=job.job_number,
+                    notes=f'Issued for {job.job_number} — {issuance.stage.name}',
+                    created_by=request.user,
+                )
+
             messages.success(
                 request,
-                f'Issued {issuance.quantity_issued} of {issuance.material.name} '
-                f'for job {job.job_number}.',
+                f'Issued {issuance.quantity_issued} {issuance.material.unit_of_measure} '
+                f'of {issuance.material.name} for job {job.job_number}. Stock updated.',
             )
             return redirect('manufacturing:job_detail', pk=job.pk)
     else:
