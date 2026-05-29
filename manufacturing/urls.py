@@ -24,6 +24,7 @@ urlpatterns = [
     path('jobs/<int:pk>/issue-materials/', views.issue_materials, name='issue_materials'),
     path('jobs/<int:pk>/requirements/add/', views.requirement_add, name='requirement_add'),
     path('jobs/<int:pk>/requirements/auto-calculate/', views.requirement_auto_calculate, name='requirement_auto_calculate'),
+    path('jobs/<int:pk>/requirements/<int:req_pk>/issue/', views.requirement_issue, name='requirement_issue'),
     path('requirements/<int:req_pk>/delete/', views.requirement_delete, name='requirement_delete'),
 
     # Quality checks

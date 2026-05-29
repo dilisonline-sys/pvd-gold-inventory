@@ -573,6 +573,65 @@ def requirement_auto_calculate(request, pk):
     return redirect('manufacturing:job_detail', pk=job.pk)
 
 
+@login_required
+@supervisor_or_above
+def requirement_issue(request, pk, req_pk):
+    """Issue the material for a specific requirement directly from the job detail page."""
+    job = get_object_or_404(ProductionJob, pk=pk)
+    req = get_object_or_404(MaterialRequirement, pk=req_pk, production_job=job)
+
+    if request.method == 'POST':
+        stage_pk = request.POST.get('stage')
+        qty_str  = request.POST.get('quantity_issued', '')
+        notes    = request.POST.get('notes', '').strip()
+
+        stage = get_object_or_404(ProcessStage, pk=stage_pk) if stage_pk else job.current_stage
+
+        try:
+            from decimal import Decimal, InvalidOperation
+            qty = Decimal(qty_str)
+            if qty <= 0:
+                raise ValueError
+        except (InvalidOperation, ValueError):
+            messages.error(request, 'Invalid quantity.')
+            return redirect('manufacturing:job_detail', pk=job.pk)
+
+        with transaction.atomic():
+            issuance = MaterialIssuance.objects.create(
+                production_job=job,
+                material=req.material,
+                quantity_requested=req.quantity_required,
+                quantity_issued=qty,
+                issued_by=request.user,
+                stage=stage,
+                notes=notes or f'Issued from requirement for {job.job_number}',
+            )
+
+            from inventory.models import CurrentStock, StockTransaction, TRANSACTION_OUT
+            stock, _ = CurrentStock.objects.get_or_create(
+                material=req.material,
+                defaults={'quantity_on_hand': 0},
+            )
+            stock.quantity_on_hand -= qty
+            stock.save()
+
+            StockTransaction.objects.create(
+                material=req.material,
+                transaction_type=TRANSACTION_OUT,
+                quantity=qty,
+                reference_number=job.job_number,
+                notes=f'Issued for {job.job_number} — {stage.name}',
+                created_by=request.user,
+            )
+
+        messages.success(
+            request,
+            f'Issued {qty} {req.material.unit_of_measure} of {req.material.name} for {job.job_number}.',
+        )
+
+    return redirect('manufacturing:job_detail', pk=job.pk)
+
+
 # ---------------------------------------------------------------------------
 # Update Stage Record
 # ---------------------------------------------------------------------------

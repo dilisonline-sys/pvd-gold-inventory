@@ -189,7 +189,7 @@
                                 <th class="text-end">Required</th>
                                 <th class="text-end">In Stock</th>
                                 <th>Status</th>
-                                {% if can_manage %}<th></th>{% endif %}
+                                {% if can_manage %}<th class="text-end">Actions</th>{% endif %}
                             </tr>
                         </thead>
                         <tbody>
@@ -212,7 +212,15 @@
                                     {% endif %}
                                 </td>
                                 {% if can_manage %}
-                                <td>
+                                <td class="text-end text-nowrap">
+                                    {% if job.status != 'COMPLETED' and job.status != 'CANCELLED' %}
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-success me-1"
+                                            title="Issue this material"
+                                            onclick="openIssueModal({{ req.pk }}, '{{ req.material.name|escapejs }}', '{{ req.quantity_required }}', '{{ req.material.unit_of_measure }}')">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>Issue
+                                    </button>
+                                    {% endif %}
                                     <form method="post" action="{% url 'manufacturing:requirement_delete' req.pk %}" class="d-inline">
                                         {% csrf_token %}
                                         <button type="submit" class="btn btn-sm btn-link text-danger p-0"
@@ -554,4 +562,71 @@
         </div>
     </div>
 </div>
+
+{% if can_manage %}
+<!-- Issue Material Modal -->
+<div class="modal fade" id="issueMaterialModal" tabindex="-1" aria-labelledby="issueMaterialModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header" style="border-bottom:2px solid var(--gold);">
+                <h5 class="modal-title" id="issueMaterialModalLabel">
+                    <i class="bi bi-box-arrow-up-right me-2" style="color:var(--gold);"></i>Issue Material
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="issueMaterialForm">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3 p-3 rounded" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.25);">
+                        <div class="text-muted small">Material</div>
+                        <div class="fw-bold" id="modal-material-name">—</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Stage <span class="text-danger">*</span></label>
+                        <select name="stage" class="form-select" id="modal-stage">
+                            {% for stage in all_stages %}
+                            <option value="{{ stage.pk }}" {% if stage.pk == job.current_stage.pk %}selected{% endif %}>{{ stage.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col">
+                            <label class="form-label fw-semibold">Quantity to Issue <span class="text-danger">*</span></label>
+                            <div class="input-group">
+                                <input type="number" name="quantity_issued" class="form-control"
+                                       id="modal-qty" step="0.0001" min="0.0001" required>
+                                <span class="input-group-text" id="modal-unit">—</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Notes</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes…"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-gold">
+                        <i class="bi bi-check-lg me-1"></i>Confirm Issue
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openIssueModal(reqPk, materialName, qty, unit) {
+    document.getElementById('modal-material-name').textContent = materialName;
+    document.getElementById('modal-qty').value = qty;
+    document.getElementById('modal-unit').textContent = unit;
+    document.getElementById('issueMaterialForm').action =
+        '/manufacturing/jobs/{{ job.pk }}/requirements/' + reqPk + '/issue/';
+    var modal = new bootstrap.Modal(document.getElementById('issueMaterialModal'));
+    modal.show();
+}
+</script>
 {% endblock %}
