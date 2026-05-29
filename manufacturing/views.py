@@ -406,11 +406,17 @@ def job_detail(request, pk):
     )
 
     # Material requirements for this job with availability status
-    requirements = (
+    requirements = list(
         job.material_requirements
         .select_related('material', 'material__current_stock', 'material__category', 'created_by')
         .order_by('material__category__name', 'material__name')
     )
+
+    # Mark each requirement as issued if a matching issuance already exists
+    issued_material_pks = set(job.material_issuances.values_list('material_id', flat=True))
+    for req in requirements:
+        req.is_issued = req.material_id in issued_material_pks
+
     requirement_form = MaterialRequirementForm()
 
     # Current stage record (create if missing)
