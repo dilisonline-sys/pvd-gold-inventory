@@ -69,14 +69,12 @@
                             {% endif %}
                         </td>
                         <td><span class="badge" style="background:var(--gold-light);color:#6b4c00;">{{ material.category }}</span></td>
-                        <td>{{ material.unit }}</td>
-                        <td class="fw-semibold">{{ material.current_stock|floatformat:2 }}</td>
+                        <td>{{ material.unit_of_measure }}</td>
+                        <td class="fw-semibold">{{ material.get_current_stock|floatformat:2 }}</td>
                         <td class="text-muted">{{ material.minimum_stock_level|floatformat:2 }}</td>
                         <td>
-                            {% if material.current_stock <= material.minimum_stock_level %}
+                            {% if material.is_low_stock %}
                                 <span class="badge bg-danger">Low Stock</span>
-                            {% elif material.current_stock <= material.minimum_stock_level|add:material.minimum_stock_level %}
-                                <span class="badge bg-warning text-dark">Warning</span>
                             {% else %}
                                 <span class="badge bg-success">OK</span>
                             {% endif %}

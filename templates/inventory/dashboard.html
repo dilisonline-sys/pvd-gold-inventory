@@ -73,9 +73,9 @@
                 <div class="low-stock-alert p-3 rounded mb-2 d-flex justify-content-between align-items-center">
                     <div>
                         <div class="fw-semibold small">{{ item.name }}</div>
-                        <div class="text-muted" style="font-size:0.78rem;">{{ item.category }} &middot; Min: {{ item.minimum_stock_level }} {{ item.unit }}</div>
+                        <div class="text-muted" style="font-size:0.78rem;">{{ item.category }} &middot; Min: {{ item.minimum_stock_level }} {{ item.unit_of_measure }}</div>
                     </div>
-                    <span class="badge bg-warning text-dark">{{ item.current_stock }} {{ item.unit }}</span>
+                    <span class="badge bg-warning text-dark">{{ item.get_current_stock }} {{ item.unit_of_measure }}</span>
                 </div>
                 {% empty %}
                 <div class="text-center text-muted py-4">
@@ -119,7 +119,7 @@
                                         <span class="badge bg-secondary">WASTE</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ tx.quantity }} {{ tx.material.unit }}</td>
+                                <td>{{ tx.quantity }} {{ tx.material.unit_of_measure }}</td>
                                 <td class="text-muted small">{{ tx.created_at|date:"d M, H:i" }}</td>
                             </tr>
                             {% empty %}

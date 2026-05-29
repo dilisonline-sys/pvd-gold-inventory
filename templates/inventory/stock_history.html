@@ -92,7 +92,7 @@
                             {% else %}
                                 <span class="text-danger fw-semibold">-{{ tx.quantity|floatformat:3 }}</span>
                             {% endif %}
-                            <span class="text-muted small">{{ tx.material.unit }}</span>
+                            <span class="text-muted small">{{ tx.material.unit_of_measure }}</span>
                         </td>
                         <td class="text-muted small">{{ tx.unit_cost|floatformat:2|default:"—" }}</td>
                         <td class="text-muted small">

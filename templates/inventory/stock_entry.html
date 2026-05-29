@@ -99,7 +99,7 @@
                                 <td class="fw-semibold">{{ entry.material.name }}</td>
                                 <td>
                                     <span class="fw-semibold text-success">+{{ entry.quantity|floatformat:2 }}</span>
-                                    <span class="text-muted small">{{ entry.material.unit }}</span>
+                                    <span class="text-muted small">{{ entry.material.unit_of_measure }}</span>
                                 </td>
                                 <td class="text-muted small">{{ entry.supplier.name|default:"—" }}</td>
                                 <td class="text-muted small">{{ entry.batch_number|default:"—" }}</td>

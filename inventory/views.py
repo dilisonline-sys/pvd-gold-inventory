@@ -1,11 +1,12 @@
 import csv
 import io
+from datetime import timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import DecimalField, F, OuterRef, Q, Subquery, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -64,10 +65,25 @@ def dashboard(request):
     """Overview: total materials, low-stock count, recent transactions."""
     total_materials = RawMaterial.objects.filter(is_active=True).count()
 
-    low_stock_materials = [
-        m for m in RawMaterial.objects.filter(is_active=True).select_related('category', 'current_stock')
-        if m.is_low_stock
-    ]
+    active_materials = (
+        RawMaterial.objects
+        .filter(is_active=True)
+        .select_related('category', 'current_stock')
+    )
+    low_stock_items = [m for m in active_materials if m.is_low_stock]
+
+    # Total stock value: current qty × last recorded unit cost per material
+    last_unit_cost = (
+        StockEntry.objects
+        .filter(material=OuterRef('material'))
+        .order_by('-entry_date', '-id')
+        .values('unit_cost')[:1]
+    )
+    total_stock_value = (
+        CurrentStock.objects
+        .annotate(last_cost=Subquery(last_unit_cost, output_field=DecimalField()))
+        .aggregate(total=Sum(F('quantity_on_hand') * F('last_cost')))
+    )['total'] or Decimal('0')
 
     recent_transactions = (
         StockTransaction.objects
@@ -75,18 +91,16 @@ def dashboard(request):
         .order_by('-created_at')[:10]
     )
 
-    recent_entries = (
-        StockEntry.objects
-        .select_related('material', 'supplier', 'entered_by')
-        .order_by('-entry_date', '-id')[:10]
-    )
+    seven_days_ago = (timezone.now() - timedelta(days=7)).date()
+    recent_entries_count = StockEntry.objects.filter(entry_date__gte=seven_days_ago).count()
 
     context = {
         'total_materials': total_materials,
-        'low_stock_count': len(low_stock_materials),
-        'low_stock_materials': low_stock_materials[:5],
+        'total_stock_value': total_stock_value,
+        'low_stock_count': len(low_stock_items),
+        'low_stock_items': low_stock_items[:5],
         'recent_transactions': recent_transactions,
-        'recent_entries': recent_entries,
+        'recent_entries_count': recent_entries_count,
     }
     return render(request, 'inventory/dashboard.html', context)
 
@@ -537,7 +551,7 @@ def low_stock_alerts(request):
     low_stock = [m for m in active_materials if m.is_low_stock]
 
     context = {
-        'low_stock_materials': low_stock,
+        'low_stock_items': low_stock,
         'count': len(low_stock),
     }
     return render(request, 'inventory/low_stock_alerts.html', context)

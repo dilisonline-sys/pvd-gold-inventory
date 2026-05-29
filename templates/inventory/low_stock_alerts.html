@@ -24,19 +24,17 @@
 
                 <!-- Stock Level Bar -->
                 <div class="mb-3">
-                    {% with pct=item.current_stock|floatformat:0 %}
+                    {% with current=item.get_current_stock %}
                     <div class="d-flex justify-content-between small text-muted mb-1">
                         <span>Current Stock</span>
-                        <span class="fw-semibold text-danger">{{ item.current_stock|floatformat:2 }} {{ item.unit }}</span>
+                        <span class="fw-semibold text-danger">{{ current|floatformat:2 }} {{ item.unit_of_measure }}</span>
                     </div>
                     <div class="progress" style="height:8px;">
                         {% if item.minimum_stock_level > 0 %}
-                            {% with ratio=item.current_stock|floatformat:0 %}
                             <div class="progress-bar bg-danger"
                                  role="progressbar"
-                                 style="width: {% widthratio item.current_stock item.minimum_stock_level 100 %}%"
+                                 style="width: {% widthratio current item.minimum_stock_level 100 %}%"
                                  aria-valuemin="0" aria-valuemax="{{ item.minimum_stock_level }}"></div>
-                            {% endwith %}
                         {% else %}
                             <div class="progress-bar bg-danger" role="progressbar" style="width:0%"></div>
                         {% endif %}
@@ -48,14 +46,14 @@
                     <div class="col-6">
                         <div class="bg-light rounded p-2">
                             <div class="small text-muted">Minimum Level</div>
-                            <div class="fw-bold text-warning">{{ item.minimum_stock_level|floatformat:2 }} {{ item.unit }}</div>
+                            <div class="fw-bold text-warning">{{ item.minimum_stock_level|floatformat:2 }} {{ item.unit_of_measure }}</div>
                         </div>
                     </div>
                     <div class="col-6">
                         <div class="bg-light rounded p-2">
                             <div class="small text-muted">Shortage</div>
                             <div class="fw-bold text-danger">
-                                {{ item.minimum_stock_level|floatformat:2 }} {{ item.unit }}
+                                {{ item.minimum_stock_level|floatformat:2 }} {{ item.unit_of_measure }}
                             </div>
                         </div>
                     </div>
