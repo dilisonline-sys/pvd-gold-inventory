@@ -136,6 +136,7 @@ def order_detail(request, pk):
         'notes': notes,
         'note_form': note_form,
         'production_jobs': production_jobs,
+        'today': timezone.now().date(),
     }
     return render(request, 'orders/order_detail.html', context)
 
