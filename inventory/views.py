@@ -131,7 +131,7 @@ def material_list(request):
     search = request.GET.get('q', '').strip()
     if search:
         materials = materials.filter(
-            Q(name__icontains=search) | Q(category__name__icontains=search)
+            Q(name__icontains=search) | Q(material_code__icontains=search) | Q(category__name__icontains=search)
         )
 
     category_filter = request.GET.get('category', '').strip()

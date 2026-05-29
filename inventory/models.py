@@ -118,6 +118,12 @@ class MaterialCategory(models.Model):
 # ---------------------------------------------------------------------------
 
 class RawMaterial(models.Model):
+    material_code = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        verbose_name='Material Code',
+    )
     name = models.CharField(max_length=200, verbose_name='Material Name')
     category = models.ForeignKey(
         MaterialCategory,
@@ -163,8 +169,14 @@ class RawMaterial(models.Model):
         verbose_name_plural = 'Raw Materials'
         ordering = ['category', 'name']
 
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if not self.material_code:
+            self.material_code = f'MAT-{self.pk:04d}'
+            RawMaterial.objects.filter(pk=self.pk).update(material_code=self.material_code)
+
     def __str__(self):
-        return f'{self.name} ({self.category})'
+        return f'[{self.material_code}] {self.name}'
 
     def get_current_stock(self):
         """Return current quantity on hand for this material, or 0 if no record exists."""

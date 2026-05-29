@@ -68,6 +68,7 @@
             <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
+                        <th>Code</th>
                         <th>Name</th>
                         <th>Category</th>
                         <th>Metal / Purity</th>
@@ -81,6 +82,10 @@
                 <tbody>
                     {% for material in materials %}
                     <tr>
+                        <td class="text-nowrap">
+                            <span class="badge bg-secondary font-monospace">{{ material.material_code }}</span>
+                            <div class="text-muted" style="font-size:0.73rem;">{{ material.created_at|date:"d M Y" }}</div>
+                        </td>
                         <td>
                             <div class="fw-semibold">{{ material.name }}</div>
                             {% if material.description %}
@@ -121,7 +126,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-5">
+                        <td colspan="9" class="text-center text-muted py-5">
                             <i class="bi bi-layers fs-2 d-block mb-2"></i>No materials found.
                         </td>
                     </tr>

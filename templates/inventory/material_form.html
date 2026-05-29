@@ -12,6 +12,18 @@
                 {% if object %}Edit Material: {{ object.name }}{% else %}Add New Material{% endif %}
             </div>
             <div class="card-body p-4">
+                {% if object %}
+                <div class="d-flex gap-4 mb-4 p-3 rounded" style="background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.3);">
+                    <div>
+                        <div class="text-muted small">Material Code</div>
+                        <div class="fw-bold font-monospace fs-5" style="color:var(--gold-dark);">{{ object.material_code }}</div>
+                    </div>
+                    <div>
+                        <div class="text-muted small">Created</div>
+                        <div class="fw-semibold">{{ object.created_at|date:"d M Y, H:i" }}</div>
+                    </div>
+                </div>
+                {% endif %}
                 <form method="post" novalidate>
                     {% csrf_token %}
                     {% for field in form %}
