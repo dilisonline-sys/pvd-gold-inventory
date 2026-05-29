@@ -1,9 +1,6 @@
 """
-Reports views for the PVD Gold Inventory / Goldsmith Manufacturing system.
-
-All views require manager-or-above access.  Each view queries the database
-using Django ORM and passes a context dict to the corresponding template.
-No placeholder data — all numbers come from real model queries.
+Reports views — all require manager-or-above access.
+All queries use real model data; no placeholder values.
 """
 
 from datetime import date, timedelta
@@ -22,7 +19,7 @@ from django.db.models import (
     Sum,
     When,
 )
-from django.db.models.functions import TruncDate, TruncMonth
+from django.db.models.functions import TruncMonth
 from django.shortcuts import render
 from django.utils import timezone
 
@@ -33,18 +30,20 @@ from inventory.models import (
     RawMaterial,
     StockEntry,
     StockTransaction,
-    Supplier,
     TRANSACTION_IN,
     TRANSACTION_OUT,
     TRANSACTION_WASTE,
 )
 from manufacturing.models import (
+    FinalProduct,
     MaterialIssuance,
+    MaterialRequirement,
     ProcessRecord,
     ProcessStage,
     ProductionJob,
     QualityCheck,
     RECORD_STATUS_COMPLETED,
+    STATUS_CANCELLED,
     STATUS_COMPLETED as MFG_STATUS_COMPLETED,
     STATUS_IN_PROGRESS,
 )
@@ -52,12 +51,15 @@ from orders.models import (
     Customer,
     JobOrder,
     ORDER_STATUS_CHOICES,
+    METAL_PURITY_CHOICES,
     STATUS_DELIVERED,
-    STATUS_CANCELLED,
-    METAL_TYPE_CHOICES,
+    STATUS_CANCELLED as ORDER_CANCELLED,
 )
 
 User = get_user_model()
+
+# Purity display lookup from orders choices
+_PURITY_DISPLAY = {val: label for val, label in METAL_PURITY_CHOICES}
 
 
 # ---------------------------------------------------------------------------
@@ -69,17 +71,14 @@ def _parse_date_range(request):
     today = timezone.now().date()
     default_from = today - timedelta(days=30)
 
-    date_from_str = request.GET.get('date_from', '')
-    date_to_str = request.GET.get('date_to', '')
-
     try:
-        date_from = date.fromisoformat(date_from_str) if date_from_str else default_from
-    except ValueError:
+        date_from = date.fromisoformat(request.GET.get('date_from', ''))
+    except (ValueError, TypeError):
         date_from = default_from
 
     try:
-        date_to = date.fromisoformat(date_to_str) if date_to_str else today
-    except ValueError:
+        date_to = date.fromisoformat(request.GET.get('date_to', ''))
+    except (ValueError, TypeError):
         date_to = today
 
     return date_from, date_to
@@ -91,14 +90,6 @@ def _parse_date_range(request):
 
 @manager_or_above
 def production_report(request):
-    """
-    Production statistics:
-    - Jobs by status
-    - Jobs by current manufacturing stage
-    - Completion rate (completed vs total)
-    - Average time from creation to completion
-    - Date-range filter applied to created_at
-    """
     date_from, date_to = _parse_date_range(request)
 
     jobs_qs = ProductionJob.objects.filter(
@@ -106,56 +97,62 @@ def production_report(request):
         created_at__date__lte=date_to,
     )
 
-    # --- Jobs by status ---
-    jobs_by_status = (
-        jobs_qs
-        .values('status')
-        .annotate(count=Count('id'))
-        .order_by('status')
-    )
-
-    # --- Jobs by current stage ---
-    jobs_by_stage = (
-        jobs_qs
-        .values('current_stage__name', 'current_stage__order_number')
-        .annotate(count=Count('id'))
-        .order_by('current_stage__order_number')
-    )
-
-    # --- Overall counts ---
     total_jobs = jobs_qs.count()
     completed_jobs = jobs_qs.filter(status=MFG_STATUS_COMPLETED).count()
     in_progress_jobs = jobs_qs.filter(status=STATUS_IN_PROGRESS).count()
-    completion_rate = (
-        round(completed_jobs / total_jobs * 100, 1) if total_jobs else 0
-    )
+    cancelled_jobs = jobs_qs.filter(status=STATUS_CANCELLED).count()
+    completion_rate = round(completed_jobs / total_jobs * 100, 1) if total_jobs else 0
 
-    # --- Process records: stage completion summary ---
-    records_qs = ProcessRecord.objects.filter(
-        production_job__in=jobs_qs
+    # Stage breakdown: how many jobs are currently at each stage (by status)
+    stage_raw = (
+        jobs_qs
+        .values('current_stage__name', 'current_stage__order_number', 'status')
+        .annotate(count=Count('id'))
+        .order_by('current_stage__order_number')
     )
-    stage_summary = (
-        records_qs
-        .values('stage__name', 'stage__order_number')
-        .annotate(
-            total=Count('id'),
-            completed=Count(Case(When(status=RECORD_STATUS_COMPLETED, then=1))),
-        )
-        .order_by('stage__order_number')
-    )
-    for row in stage_summary:
-        row['completion_pct'] = (
-            round(row['completed'] / row['total'] * 100, 1) if row['total'] else 0
-        )
+    stage_dict = {}
+    stage_order = {}
+    for row in stage_raw:
+        name = row['current_stage__name'] or 'Unknown'
+        stage_order[name] = row['current_stage__order_number'] or 99
+        if name not in stage_dict:
+            stage_dict[name] = {'stage': name, 'active': 0, 'completed': 0, 'other': 0}
+        if row['status'] == STATUS_IN_PROGRESS:
+            stage_dict[name]['active'] += row['count']
+        elif row['status'] == MFG_STATUS_COMPLETED:
+            stage_dict[name]['completed'] += row['count']
+        else:
+            stage_dict[name]['other'] += row['count']
+    stage_breakdown = sorted(stage_dict.values(), key=lambda r: stage_order.get(r['stage'], 99))
 
-    # --- QC pass/fail summary ---
-    qc_summary = (
+    # QC summary with percentage
+    qc_raw = (
         QualityCheck.objects
         .filter(process_record__production_job__in=jobs_qs)
         .values('result')
         .annotate(count=Count('id'))
         .order_by('result')
     )
+    qc_list = list(qc_raw)
+    total_qc = sum(r['count'] for r in qc_list)
+    qc_summary = [
+        {**r, 'pct': round(r['count'] / total_qc * 100, 1) if total_qc else 0}
+        for r in qc_list
+    ]
+
+    # Material shortfalls for active jobs
+    active_reqs = (
+        MaterialRequirement.objects
+        .filter(production_job__in=jobs_qs, production_job__status=STATUS_IN_PROGRESS)
+        .select_related('material', 'material__current_stock', 'production_job')
+    )
+    shortfall_count = sum(1 for r in active_reqs if not r.is_available)
+
+    # Catalog entries created in this period
+    catalog_count = FinalProduct.objects.filter(
+        created_at__date__gte=date_from,
+        created_at__date__lte=date_to,
+    ).count()
 
     context = {
         'date_from': date_from,
@@ -163,11 +160,12 @@ def production_report(request):
         'total_jobs': total_jobs,
         'completed_jobs': completed_jobs,
         'in_progress_jobs': in_progress_jobs,
+        'cancelled_jobs': cancelled_jobs,
         'completion_rate': completion_rate,
-        'jobs_by_status': list(jobs_by_status),
-        'jobs_by_stage': list(jobs_by_stage),
-        'stage_summary': list(stage_summary),
-        'qc_summary': list(qc_summary),
+        'stage_breakdown': stage_breakdown,
+        'qc_summary': qc_summary,
+        'shortfall_count': shortfall_count,
+        'catalog_count': catalog_count,
     }
     return render(request, 'reports/production_report.html', context)
 
@@ -178,119 +176,107 @@ def production_report(request):
 
 @manager_or_above
 def inventory_report(request):
-    """
-    Inventory statistics:
-    - Current stock levels for all materials
-    - Low-stock materials (below minimum)
-    - Stock consumed (OUT transactions) in date range
-    - Supplier summary: total value received per supplier
-    """
     date_from, date_to = _parse_date_range(request)
 
-    # --- Current stock ---
-    all_materials = RawMaterial.objects.filter(is_active=True).select_related(
-        'category', 'current_stock'
+    all_materials = (
+        RawMaterial.objects
+        .filter(is_active=True)
+        .select_related('category', 'current_stock')
+        .order_by('category__name', 'name')
     )
 
-    stock_levels = []
-    low_stock_items = []
+    materials_data = []
     for mat in all_materials:
         qty = mat.get_current_stock()
-        stock_levels.append({
-            'material': mat,
-            'quantity': qty,
+        materials_data.append({
+            'name': mat.name,
+            'category': mat.category.name,
+            'metal_type': mat.metal_type,
+            'metal_purity': _PURITY_DISPLAY.get(mat.metal_purity, mat.metal_purity),
             'unit': mat.unit_of_measure,
-            'minimum': mat.minimum_stock_level,
+            'on_hand': qty,
+            'min_level': mat.minimum_stock_level,
             'is_low': mat.is_low_stock,
+            'pk': mat.pk,
         })
-        if mat.is_low_stock:
-            low_stock_items.append({
-                'material': mat,
-                'quantity': qty,
-                'minimum': mat.minimum_stock_level,
-                'shortage': mat.minimum_stock_level - qty,
-            })
 
-    # --- Consumption in date range (OUT transactions) ---
-    consumption_qs = (
+    total_materials = len(materials_data)
+    low_stock_count = sum(1 for m in materials_data if m['is_low'])
+
+    # Totals for the date range
+    total_received = (
         StockTransaction.objects
-        .filter(
-            transaction_type=TRANSACTION_OUT,
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to,
-        )
+        .filter(transaction_type=TRANSACTION_IN, created_at__date__gte=date_from, created_at__date__lte=date_to)
+        .aggregate(total=Sum('quantity'))['total'] or Decimal('0')
+    )
+    total_consumed = (
+        StockTransaction.objects
+        .filter(transaction_type=TRANSACTION_OUT, created_at__date__gte=date_from, created_at__date__lte=date_to)
+        .aggregate(total=Sum('quantity'))['total'] or Decimal('0')
+    )
+    total_waste = (
+        StockTransaction.objects
+        .filter(transaction_type=TRANSACTION_WASTE, created_at__date__gte=date_from, created_at__date__lte=date_to)
+        .aggregate(total=Sum('quantity'))['total'] or Decimal('0')
+    )
+
+    # Consumption breakdown by material
+    consumption = (
+        StockTransaction.objects
+        .filter(transaction_type=TRANSACTION_OUT, created_at__date__gte=date_from, created_at__date__lte=date_to)
         .values('material__name', 'material__unit_of_measure', 'material__category__name')
         .annotate(total_consumed=Sum('quantity'))
         .order_by('-total_consumed')
     )
 
-    # --- Waste in date range ---
-    waste_qs = (
-        StockTransaction.objects
-        .filter(
-            transaction_type=TRANSACTION_WASTE,
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to,
-        )
-        .values('material__name', 'material__unit_of_measure')
-        .annotate(total_waste=Sum('quantity'))
-        .order_by('-total_waste')
-    )
-
-    # --- Stock received in date range (IN transactions) ---
-    received_qs = (
-        StockTransaction.objects
-        .filter(
-            transaction_type=TRANSACTION_IN,
-            created_at__date__gte=date_from,
-            created_at__date__lte=date_to,
-        )
-        .aggregate(
-            total_transactions=Count('id'),
-            total_qty=Sum('quantity'),
-        )
-    )
-
-    # --- Supplier summary: stock entries in date range ---
+    # Supplier summary
     supplier_summary = (
         StockEntry.objects
-        .filter(
-            entry_date__gte=date_from,
-            entry_date__lte=date_to,
-            supplier__isnull=False,
-        )
+        .filter(entry_date__gte=date_from, entry_date__lte=date_to, supplier__isnull=False)
         .values('supplier__name')
-        .annotate(
-            total_entries=Count('id'),
-            total_value=Sum('total_cost'),
-        )
+        .annotate(total_entries=Count('id'), total_value=Sum('total_cost'))
         .order_by('-total_value')
     )
 
-    # --- Category breakdown of current stock count ---
-    category_breakdown = (
+    # Category summary
+    category_raw = (
         RawMaterial.objects
         .filter(is_active=True)
         .values('category__name')
         .annotate(material_count=Count('id'))
         .order_by('category__name')
     )
+    category_summary = [
+        {'category': r['category__name'], 'count': r['material_count']}
+        for r in category_raw
+    ]
 
-    total_materials = all_materials.count()
-    low_stock_count = len(low_stock_items)
+    # Material requirement shortfalls for active jobs
+    all_reqs = (
+        MaterialRequirement.objects
+        .filter(production_job__status__in=('PENDING', 'IN_PROGRESS', 'ON_HOLD'))
+        .select_related(
+            'material', 'material__current_stock',
+            'production_job', 'production_job__current_stage',
+        )
+        .order_by('production_job__job_number', 'material__name')
+    )
+    shortfall_items = [r for r in all_reqs if not r.is_available]
 
     context = {
         'date_from': date_from,
         'date_to': date_to,
-        'stock_levels': stock_levels,
-        'low_stock_items': low_stock_items,
+        'materials_data': materials_data,
         'total_materials': total_materials,
         'low_stock_count': low_stock_count,
-        'consumption': list(consumption_qs),
-        'waste': list(waste_qs),
-        'received': received_qs,
+        'total_received': total_received,
+        'total_consumed': total_consumed,
+        'total_waste': total_waste,
+        'consumption': list(consumption),
         'supplier_summary': list(supplier_summary),
-        'category_breakdown': list(category_breakdown),
+        'category_summary': category_summary,
+        'shortfall_items': shortfall_items,
+        'shortfall_count': len(shortfall_items),
     }
     return render(request, 'reports/inventory_report.html', context)
 
@@ -301,14 +287,6 @@ def inventory_report(request):
 
 @manager_or_above
 def order_report(request):
-    """
-    Order statistics:
-    - Orders by status
-    - Orders by metal type
-    - Revenue summary (estimated vs actual, advance payments, balance due)
-    - Top customers by order count / revenue
-    - Monthly order volume trend
-    """
     date_from, date_to = _parse_date_range(request)
 
     orders_qs = JobOrder.objects.filter(
@@ -316,65 +294,59 @@ def order_report(request):
         order_date__lte=date_to,
     )
 
-    # --- Orders by status ---
-    orders_by_status = (
-        orders_qs
-        .values('status')
-        .annotate(count=Count('id'))
-        .order_by('status')
-    )
-    status_map = dict(ORDER_STATUS_CHOICES)
-    for row in orders_by_status:
-        row['status_display'] = status_map.get(row['status'], row['status'])
+    total_orders = orders_qs.count()
+    delivered_orders = orders_qs.filter(status=STATUS_DELIVERED).count()
 
-    # --- Orders by metal type ---
-    orders_by_metal = (
-        orders_qs
-        .values('metal_type')
-        .annotate(count=Count('id'))
-        .order_by('-count')
-    )
-
-    # --- Orders by metal purity ---
-    orders_by_purity = (
-        orders_qs
-        .values('metal_purity')
-        .annotate(count=Count('id'))
-        .order_by('-count')
-    )
-
-    # --- Revenue summary ---
+    # Financial summary (handle nullable estimated_cost)
     financials = orders_qs.aggregate(
         total_estimated=Sum('estimated_cost'),
         total_actual=Sum('actual_cost'),
         total_advance=Sum('advance_payment'),
-        order_count=Count('id'),
     )
     total_estimated = financials['total_estimated'] or Decimal('0')
     total_actual = financials['total_actual'] or Decimal('0')
     total_advance = financials['total_advance'] or Decimal('0')
-    # balance due = sum(actual_cost or estimated_cost) - sum(advance)
-    effective_cost = total_actual if total_actual else total_estimated
-    total_balance_due = effective_cost - total_advance
+    total_revenue = total_actual if total_actual else total_estimated
+    total_balance_due = total_revenue - total_advance
 
-    # --- Top customers by order count ---
-    top_customers_by_count = (
+    # Status breakdown with revenue
+    status_raw = (
+        orders_qs
+        .values('status')
+        .annotate(count=Count('id'), revenue=Sum('estimated_cost'))
+        .order_by('status')
+    )
+    status_map = dict(ORDER_STATUS_CHOICES)
+    status_counts = [
+        {
+            'status': status_map.get(r['status'], r['status']),
+            'count': r['count'],
+            'revenue': r['revenue'] or Decimal('0'),
+        }
+        for r in status_raw
+    ]
+
+    # Top customers (by order count, with revenue)
+    top_customers = list(
         orders_qs
         .values('customer__name', 'customer__id')
-        .annotate(order_count=Count('id'))
-        .order_by('-order_count')[:10]
+        .annotate(total_orders=Count('id'), total_revenue=Sum('estimated_cost'))
+        .order_by('-total_orders')[:10]
     )
 
-    # --- Top customers by estimated revenue ---
-    top_customers_by_revenue = (
+    # Orders by metal type + purity combined
+    metal_type_counts = list(
         orders_qs
-        .values('customer__name', 'customer__id')
-        .annotate(total_revenue=Sum('estimated_cost'))
-        .order_by('-total_revenue')[:10]
+        .values('metal_type', 'metal_purity')
+        .annotate(count=Count('id'))
+        .order_by('-count')
     )
+    # Add display label for purity
+    for row in metal_type_counts:
+        row['metal_purity_display'] = _PURITY_DISPLAY.get(row['metal_purity'], row['metal_purity'])
 
-    # --- Monthly trend (orders per month) ---
-    monthly_trend = (
+    # Monthly trend
+    monthly_trend = list(
         orders_qs
         .annotate(month=TruncMonth('order_date'))
         .values('month')
@@ -382,30 +354,31 @@ def order_report(request):
         .order_by('month')
     )
 
-    # --- Delivery performance ---
+    # Delivery performance
     delivered_qs = orders_qs.filter(status=STATUS_DELIVERED)
     on_time = delivered_qs.filter(delivery_date__lte=F('required_date')).count()
     late = delivered_qs.filter(delivery_date__gt=F('required_date')).count()
     total_delivered = delivered_qs.count()
+    on_time_rate = round(on_time / total_delivered * 100, 1) if total_delivered else 0
 
     context = {
         'date_from': date_from,
         'date_to': date_to,
-        'order_count': financials['order_count'],
-        'orders_by_status': list(orders_by_status),
-        'orders_by_metal': list(orders_by_metal),
-        'orders_by_purity': list(orders_by_purity),
+        'total_orders': total_orders,
+        'delivered_orders': delivered_orders,
+        'total_revenue': total_revenue,
         'total_estimated': total_estimated,
         'total_actual': total_actual,
         'total_advance': total_advance,
         'total_balance_due': total_balance_due,
-        'top_customers_by_count': list(top_customers_by_count),
-        'top_customers_by_revenue': list(top_customers_by_revenue),
-        'monthly_trend': list(monthly_trend),
-        'total_delivered': total_delivered,
+        'on_time_rate': on_time_rate,
         'on_time_deliveries': on_time,
         'late_deliveries': late,
-        'on_time_pct': round(on_time / total_delivered * 100, 1) if total_delivered else 0,
+        'total_delivered': total_delivered,
+        'status_counts': status_counts,
+        'top_customers': top_customers,
+        'metal_type_counts': metal_type_counts,
+        'monthly_trend': monthly_trend,
     }
     return render(request, 'reports/order_report.html', context)
 
@@ -416,16 +389,9 @@ def order_report(request):
 
 @manager_or_above
 def gold_consumption_report(request):
-    """
-    Gold weight tracking:
-    - Total gold received (stock entries for Gold category) in date range
-    - Total gold issued to production (MaterialIssuance for gold materials)
-    - Weight in vs weight out per production job (via ProcessRecord)
-    - Waste/loss per job and in total
-    """
     date_from, date_to = _parse_date_range(request)
 
-    # --- Gold stock received ---
+    # Gold received in date range
     gold_received = (
         StockEntry.objects
         .filter(
@@ -433,14 +399,10 @@ def gold_consumption_report(request):
             entry_date__gte=date_from,
             entry_date__lte=date_to,
         )
-        .aggregate(
-            total_qty=Sum('quantity'),
-            total_cost=Sum('total_cost'),
-            entry_count=Count('id'),
-        )
+        .aggregate(total_qty=Sum('quantity'), total_cost=Sum('total_cost'), entry_count=Count('id'))
     )
 
-    # --- Gold issued to production ---
+    # Gold issued to production
     gold_issued = (
         MaterialIssuance.objects
         .filter(
@@ -448,13 +410,23 @@ def gold_consumption_report(request):
             issued_at__date__gte=date_from,
             issued_at__date__lte=date_to,
         )
-        .aggregate(
-            total_issued=Sum('quantity_issued'),
-            issuance_count=Count('id'),
-        )
+        .aggregate(total_issued=Sum('quantity_issued'), issuance_count=Count('id'))
     )
 
-    # --- Per-job weight tracking via ProcessRecords ---
+    # Also include gold purity-tagged materials beyond category
+    gold_purity_issued = (
+        MaterialIssuance.objects
+        .filter(
+            Q(material__category__name=MaterialCategory.GOLD) | Q(material__metal_type='Gold'),
+            issued_at__date__gte=date_from,
+            issued_at__date__lte=date_to,
+        )
+        .values('material__name', 'material__metal_purity', 'material__unit_of_measure')
+        .annotate(total=Sum('quantity_issued'))
+        .order_by('-total')
+    )
+
+    # Per-job weight tracking via ProcessRecords
     job_weight_summary = (
         ProcessRecord.objects
         .filter(
@@ -462,11 +434,7 @@ def gold_consumption_report(request):
             production_job__created_at__date__lte=date_to,
             weight_in__isnull=False,
         )
-        .values(
-            'production_job__job_number',
-            'production_job__title',
-            'production_job__id',
-        )
+        .values('production_job__job_number', 'production_job__title', 'production_job__id')
         .annotate(
             total_weight_in=Sum('weight_in'),
             total_weight_out=Sum('weight_out'),
@@ -475,25 +443,23 @@ def gold_consumption_report(request):
         .order_by('production_job__job_number')
     )
 
-    # Compute loss per job
-    job_weight_rows = []
     total_weight_in = Decimal('0')
     total_weight_out = Decimal('0')
     total_waste_weight = Decimal('0')
+    job_data = []
     for row in job_weight_summary:
         wi = row['total_weight_in'] or Decimal('0')
         wo = row['total_weight_out'] or Decimal('0')
         ww = row['total_waste'] or Decimal('0')
         loss = wi - wo
         loss_pct = round(float(loss) / float(wi) * 100, 2) if wi else 0
-        job_weight_rows.append({
+        job_data.append({
+            'job_pk': row['production_job__id'],
             'job_number': row['production_job__job_number'],
-            'job_title': row['production_job__title'],
-            'job_id': row['production_job__id'],
+            'title': row['production_job__title'] or '',
             'weight_in': wi,
             'weight_out': wo,
             'waste': ww,
-            'loss': loss,
             'loss_pct': loss_pct,
         })
         total_weight_in += wi
@@ -502,12 +468,11 @@ def gold_consumption_report(request):
 
     total_loss = total_weight_in - total_weight_out
     overall_loss_pct = (
-        round(float(total_loss) / float(total_weight_in) * 100, 2)
-        if total_weight_in else 0
+        round(float(total_loss) / float(total_weight_in) * 100, 2) if total_weight_in else 0
     )
 
-    # --- Stage-level weight loss breakdown ---
-    stage_weight = (
+    # Stage-level weight loss
+    stage_weight_raw = (
         ProcessRecord.objects
         .filter(
             production_job__created_at__date__gte=date_from,
@@ -516,40 +481,42 @@ def gold_consumption_report(request):
             weight_out__isnull=False,
         )
         .values('stage__name', 'stage__order_number')
-        .annotate(
-            total_in=Sum('weight_in'),
-            total_out=Sum('weight_out'),
-            total_waste=Sum('waste_weight'),
-        )
+        .annotate(total_in=Sum('weight_in'), total_out=Sum('weight_out'), total_waste=Sum('waste_weight'))
         .order_by('stage__order_number')
     )
     stage_weight_rows = []
-    for row in stage_weight:
+    for row in stage_weight_raw:
         wi = row['total_in'] or Decimal('0')
         wo = row['total_out'] or Decimal('0')
         loss = wi - wo
-        loss_pct = round(float(loss) / float(wi) * 100, 2) if wi else 0
         stage_weight_rows.append({
             'stage': row['stage__name'],
             'weight_in': wi,
             'weight_out': wo,
             'waste': row['total_waste'] or Decimal('0'),
             'loss': loss,
-            'loss_pct': loss_pct,
+            'loss_pct': round(float(loss) / float(wi) * 100, 2) if wi else 0,
         })
+
+    totals = {
+        'total_received': gold_received['total_qty'] or Decimal('0'),
+        'total_issued': gold_issued['total_issued'] or Decimal('0'),
+        'total_waste': total_waste_weight,
+        'loss_pct': overall_loss_pct,
+    }
 
     context = {
         'date_from': date_from,
         'date_to': date_to,
+        'totals': totals,
         'gold_received': gold_received,
         'gold_issued': gold_issued,
-        'job_weight_rows': job_weight_rows,
+        'gold_purity_issued': list(gold_purity_issued),
+        'job_data': job_data,
+        'stage_weight_rows': stage_weight_rows,
         'total_weight_in': total_weight_in,
         'total_weight_out': total_weight_out,
-        'total_waste_weight': total_waste_weight,
         'total_loss': total_loss,
-        'overall_loss_pct': overall_loss_pct,
-        'stage_weight_rows': stage_weight_rows,
     }
     return render(request, 'reports/gold_consumption.html', context)
 
@@ -560,16 +527,9 @@ def gold_consumption_report(request):
 
 @manager_or_above
 def worker_productivity(request):
-    """
-    Worker productivity statistics:
-    - Number of process records completed per worker in date range
-    - Average time spent per stage per worker (completed_at - started_at)
-    - QC pass rate per worker
-    - Material issuances handled per worker
-    """
     date_from, date_to = _parse_date_range(request)
 
-    # --- Process records completed per worker ---
+    # Completed records per worker
     worker_records = (
         ProcessRecord.objects
         .filter(
@@ -578,19 +538,12 @@ def worker_productivity(request):
             completed_at__date__lte=date_to,
             assigned_to__isnull=False,
         )
-        .values(
-            'assigned_to__id',
-            'assigned_to__username',
-            'assigned_to__first_name',
-            'assigned_to__last_name',
-        )
-        .annotate(
-            records_completed=Count('id'),
-        )
+        .values('assigned_to__id', 'assigned_to__username', 'assigned_to__first_name', 'assigned_to__last_name', 'assigned_to__role')
+        .annotate(records_completed=Count('id'))
         .order_by('-records_completed')
     )
 
-    # --- Average duration per worker (where both started_at and completed_at set) ---
+    # Average duration per worker
     worker_duration = (
         ProcessRecord.objects
         .filter(
@@ -601,62 +554,37 @@ def worker_productivity(request):
             started_at__isnull=False,
             completed_at__isnull=False,
         )
-        .values(
-            'assigned_to__id',
-            'assigned_to__username',
-        )
+        .values('assigned_to__id')
         .annotate(
             avg_duration=Avg(
-                ExpressionWrapper(
-                    F('completed_at') - F('started_at'),
-                    output_field=DurationField(),
-                )
+                ExpressionWrapper(F('completed_at') - F('started_at'), output_field=DurationField())
             )
         )
     )
-    duration_map = {
-        row['assigned_to__id']: row['avg_duration']
-        for row in worker_duration
-    }
+    duration_map = {r['assigned_to__id']: r['avg_duration'] for r in worker_duration}
 
-    # --- QC checks per worker ---
+    # QC checks per worker
     worker_qc = (
         QualityCheck.objects
-        .filter(
-            checked_at__date__gte=date_from,
-            checked_at__date__lte=date_to,
-        )
+        .filter(checked_at__date__gte=date_from, checked_at__date__lte=date_to)
         .values('checked_by__id', 'checked_by__username')
-        .annotate(
-            total_checks=Count('id'),
-            passed=Count(Case(When(result='PASS', then=1))),
-        )
+        .annotate(total_checks=Count('id'), passed=Count(Case(When(result='PASS', then=1))))
     )
-    qc_map = {
-        row['checked_by__id']: {
-            'total_checks': row['total_checks'],
-            'passed': row['passed'],
-        }
-        for row in worker_qc
-    }
+    qc_map = {r['checked_by__id']: r for r in worker_qc}
 
-    # --- Material issuances per worker ---
-    issuance_per_worker = (
-        MaterialIssuance.objects
-        .filter(
-            issued_at__date__gte=date_from,
-            issued_at__date__lte=date_to,
-        )
-        .values('issued_by__id', 'issued_by__username')
-        .annotate(issuances=Count('id'))
-    )
+    # Material issuances per worker
     issuance_map = {
-        row['issued_by__id']: row['issuances']
-        for row in issuance_per_worker
+        r['issued_by__id']: r['issuances']
+        for r in (
+            MaterialIssuance.objects
+            .filter(issued_at__date__gte=date_from, issued_at__date__lte=date_to)
+            .values('issued_by__id')
+            .annotate(issuances=Count('id'))
+        )
     }
 
-    # --- Stage breakdown: jobs processed per stage ---
-    stage_productivity = (
+    # Stage productivity (completed records per stage)
+    stage_productivity = list(
         ProcessRecord.objects
         .filter(
             status=RECORD_STATUS_COMPLETED,
@@ -668,40 +596,39 @@ def worker_productivity(request):
         .order_by('stage__order_number')
     )
 
-    # Build merged worker productivity rows
-    productivity_rows = []
+    # Build worker_data rows
+    worker_data = []
     for row in worker_records:
         uid = row['assigned_to__id']
         first = row['assigned_to__first_name'] or ''
         last = row['assigned_to__last_name'] or ''
         display_name = f'{first} {last}'.strip() or row['assigned_to__username']
+        role = row.get('assigned_to__role', '')
 
         qc_data = qc_map.get(uid, {'total_checks': 0, 'passed': 0})
-        qc_pass_rate = (
-            round(qc_data['passed'] / qc_data['total_checks'] * 100, 1)
-            if qc_data['total_checks'] else None
-        )
+        total_checks = qc_data.get('total_checks', 0) or 0
+        passed = qc_data.get('passed', 0) or 0
+        qc_pass_rate = round(passed / total_checks * 100, 1) if total_checks else None
 
         avg_dur = duration_map.get(uid)
         avg_hours = round(avg_dur.total_seconds() / 3600, 2) if avg_dur else None
 
-        productivity_rows.append({
-            'user_id': uid,
+        worker_data.append({
+            'worker_name': display_name,
             'username': row['assigned_to__username'],
-            'display_name': display_name,
-            'records_completed': row['records_completed'],
-            'avg_duration_hours': avg_hours,
-            'total_qc_checks': qc_data['total_checks'],
+            'department': role.replace('_', ' ').title() if role else '—',
+            'stages_completed': row['records_completed'],
+            'avg_hours': avg_hours,
             'qc_pass_rate': qc_pass_rate,
-            'issuances_handled': issuance_map.get(uid, 0),
+            'materials_handled': issuance_map.get(uid, 0),
         })
 
     context = {
         'date_from': date_from,
         'date_to': date_to,
-        'productivity_rows': productivity_rows,
-        'stage_productivity': list(stage_productivity),
-        'total_workers': len(productivity_rows),
-        'total_records_completed': sum(r['records_completed'] for r in productivity_rows),
+        'worker_data': worker_data,
+        'stage_productivity': stage_productivity,
+        'total_workers': len(worker_data),
+        'total_records_completed': sum(r['stages_completed'] for r in worker_data),
     }
     return render(request, 'reports/worker_productivity.html', context)

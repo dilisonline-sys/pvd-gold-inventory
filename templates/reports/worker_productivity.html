@@ -4,43 +4,90 @@
 {% block page_title %}Worker Productivity Report{% endblock %}
 
 {% block content %}
-<div class="card">
-    <div class="card-header"><i class="bi bi-person-check me-2"></i>Worker Performance Summary</div>
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-3"><label class="form-label small fw-semibold">From Date</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-3"><label class="form-label small fw-semibold">To Date</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-auto"><button type="submit" class="btn btn-gold btn-sm"><i class="bi bi-funnel me-1"></i>Apply</button></div>
+            <div class="col-auto"><a href="{% url 'reports:worker_productivity' %}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(201,168,76,0.15);"><i class="bi bi-people fs-4" style="color:var(--gold);"></i></div>
+            <div><div class="stat-value">{{ total_workers }}</div><div class="stat-label">Active Workers</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#198754;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(25,135,84,0.12);"><i class="bi bi-check2-all fs-4 text-success"></i></div>
+            <div><div class="stat-value text-success">{{ total_records_completed }}</div><div class="stat-label">Stages Completed</div></div>
+        </div></div>
+    </div>
+</div>
+
+<!-- Worker Performance Table -->
+<div class="card mb-4">
+    <div class="card-header py-3"><i class="bi bi-person-check me-2" style="color:var(--gold);"></i>Worker Performance Summary</div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
                     <tr>
                         <th>Worker</th>
-                        <th>Department</th>
-                        <th>Stages Completed</th>
-                        <th>Avg. Stage Duration</th>
-                        <th>QC Pass Rate</th>
-                        <th>Materials Handled</th>
+                        <th>Role</th>
+                        <th class="text-center">Stages Completed</th>
+                        <th class="text-center">Avg. Stage Duration</th>
+                        <th class="text-center">QC Pass Rate</th>
+                        <th class="text-center">Materials Handled</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in worker_data %}
                     <tr>
-                        <td class="fw-semibold">{{ row.worker_name }}</td>
-                        <td class="small text-muted">{{ row.department|default:"—" }}</td>
-                        <td><span class="badge bg-primary">{{ row.stages_completed }}</span></td>
-                        <td class="small">{% if row.avg_hours %}{{ row.avg_hours|floatformat:1 }} hrs{% else %}&mdash;{% endif %}</td>
-                        <td>
+                        <td class="fw-semibold">{{ row.worker_name }}<div class="text-muted" style="font-size:0.78rem;">@{{ row.username }}</div></td>
+                        <td class="text-muted">{{ row.department|default:"—" }}</td>
+                        <td class="text-center"><span class="badge bg-primary">{{ row.stages_completed }}</span></td>
+                        <td class="text-center">{% if row.avg_hours %}{{ row.avg_hours|floatformat:1 }} hrs{% else %}&mdash;{% endif %}</td>
+                        <td class="text-center">
                             {% if row.qc_pass_rate is not None %}
-                            <span class="{% if row.qc_pass_rate >= 90 %}text-success{% elif row.qc_pass_rate >= 70 %}text-warning{% else %}text-danger{% endif %} fw-semibold">
-                                {{ row.qc_pass_rate|floatformat:0 }}%
-                            </span>
+                            <span class="fw-semibold {% if row.qc_pass_rate >= 90 %}text-success{% elif row.qc_pass_rate >= 70 %}text-warning{% else %}text-danger{% endif %}">{{ row.qc_pass_rate|floatformat:0 }}%</span>
                             {% else %}&mdash;{% endif %}
                         </td>
-                        <td>{{ row.materials_handled|default:"0" }}</td>
+                        <td class="text-center">{{ row.materials_handled|default:"0" }}</td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-people fs-2 d-block mb-2"></i>No productivity data yet.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-people fs-2 d-block mb-2"></i>No productivity data in this period.</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
+
+<!-- Stage Productivity Breakdown -->
+{% if stage_productivity %}
+<div class="card">
+    <div class="card-header py-3"><i class="bi bi-bar-chart-steps me-2" style="color:var(--gold);"></i>Stages Completed by Stage</div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light"><tr><th>Stage</th><th class="text-center">Completed Records</th></tr></thead>
+            <tbody>
+                {% for row in stage_productivity %}
+                <tr>
+                    <td class="fw-semibold">{{ row.stage__name|default:"—" }}</td>
+                    <td class="text-center"><span class="badge bg-success">{{ row.completed_count }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

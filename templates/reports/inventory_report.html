@@ -4,32 +4,83 @@
 {% block page_title %}Inventory Report{% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ total_materials|default:"0" }}</div><div class="stat-label">Total Materials</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#ffc107;"><div class="card-body"><div class="stat-value text-warning">{{ low_stock_count|default:"0" }}</div><div class="stat-label">Low Stock Items</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#198754;"><div class="card-body"><div class="stat-value text-success">{{ total_received|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Received (units)</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#dc3545;"><div class="card-body"><div class="stat-value text-danger">{{ total_consumed|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Consumed (units)</div></div></div></div>
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-3"><label class="form-label small fw-semibold">From Date</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-3"><label class="form-label small fw-semibold">To Date</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-auto"><button type="submit" class="btn btn-gold btn-sm"><i class="bi bi-funnel me-1"></i>Apply</button></div>
+            <div class="col-auto"><a href="{% url 'reports:inventory_report' %}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+        </form>
+    </div>
 </div>
 
-<div class="row g-4">
-    <div class="col-lg-8">
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(201,168,76,0.15);"><i class="bi bi-layers fs-4" style="color:var(--gold);"></i></div>
+            <div><div class="stat-value">{{ total_materials }}</div><div class="stat-label">Total Materials</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#ffc107;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(255,193,7,0.15);"><i class="bi bi-exclamation-triangle fs-4 text-warning"></i></div>
+            <div><div class="stat-value text-warning">{{ low_stock_count }}</div><div class="stat-label">Low Stock Items</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#198754;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(25,135,84,0.12);"><i class="bi bi-box-arrow-in-down fs-4 text-success"></i></div>
+            <div><div class="stat-value text-success">{{ total_received|floatformat:2 }}</div><div class="stat-label">Received (period)</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#dc3545;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(220,53,69,0.1);"><i class="bi bi-box-arrow-up-right fs-4 text-danger"></i></div>
+            <div><div class="stat-value text-danger">{{ total_consumed|floatformat:2 }}</div><div class="stat-label">Consumed (period)</div></div>
+        </div></div>
+    </div>
+</div>
+
+<!-- Order shortfalls -->
+{% if shortfall_count %}
+<div class="alert alert-danger d-flex align-items-center mb-4">
+    <i class="bi bi-exclamation-triangle-fill me-2 flex-shrink-0"></i>
+    <div><strong>{{ shortfall_count }} order shortfall{{ shortfall_count|pluralize }}</strong> — active production jobs are waiting for materials.
+    <a href="{% url 'inventory:low_stock_alerts' %}" class="alert-link ms-1">View Details &rarr;</a></div>
+</div>
+{% endif %}
+
+<div class="row g-4 mb-4">
+    <!-- Stock Levels Table -->
+    <div class="col-lg-9">
         <div class="card">
-            <div class="card-header">Stock Levels by Material</div>
+            <div class="card-header py-3"><i class="bi bi-table me-2" style="color:var(--gold);"></i>Current Stock Levels</div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light"><tr><th>Material</th><th>Category</th><th>Unit</th><th>On Hand</th><th>Min Level</th><th>Status</th></tr></thead>
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light">
+                            <tr><th>Material</th><th>Category</th><th>Metal / Purity</th><th>Unit</th><th class="text-end">On Hand</th><th class="text-end">Min Level</th><th>Status</th></tr>
+                        </thead>
                         <tbody>
                             {% for item in materials_data %}
                             <tr class="{% if item.is_low %}table-warning{% endif %}">
                                 <td class="fw-semibold">{{ item.name }}</td>
-                                <td class="small text-muted">{{ item.category }}</td>
-                                <td class="small">{{ item.unit }}</td>
-                                <td class="fw-semibold {% if item.is_low %}text-danger{% endif %}">{{ item.on_hand|floatformat:2 }}</td>
-                                <td class="small text-muted">{{ item.min_level|floatformat:2 }}</td>
-                                <td>{% if item.is_low %}<span class="badge bg-danger">Low Stock</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
+                                <td><span class="badge" style="background:var(--gold-light);color:#6b4c00;">{{ item.category }}</span></td>
+                                <td>
+                                    {% if item.metal_type %}
+                                        <span class="badge bg-secondary">{{ item.metal_type }}</span>
+                                        {% if item.metal_purity %}<span class="badge bg-light text-dark border">{{ item.metal_purity }}</span>{% endif %}
+                                    {% else %}<span class="text-muted">—</span>{% endif %}
+                                </td>
+                                <td class="text-muted">{{ item.unit }}</td>
+                                <td class="text-end fw-semibold {% if item.is_low %}text-danger{% endif %}">{{ item.on_hand|floatformat:2 }}</td>
+                                <td class="text-end text-muted">{{ item.min_level|floatformat:2 }}</td>
+                                <td>{% if item.is_low %}<span class="badge bg-danger">Low</span>{% else %}<span class="badge bg-success">OK</span>{% endif %}</td>
                             </tr>
-                            {% empty %}<tr><td colspan="6" class="text-center text-muted py-4">No materials</td></tr>
+                            {% empty %}<tr><td colspan="7" class="text-muted text-center py-4">No materials.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -37,23 +88,80 @@
             </div>
         </div>
     </div>
-    <div class="col-lg-4">
-        <div class="card">
-            <div class="card-header">By Category</div>
+
+    <!-- Category Summary -->
+    <div class="col-lg-3">
+        <div class="card mb-4">
+            <div class="card-header py-3"><i class="bi bi-pie-chart me-2" style="color:var(--gold);"></i>By Category</div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead class="table-light"><tr><th>Category</th><th>Materials</th></tr></thead>
-                        <tbody>
-                            {% for row in category_summary %}
-                            <tr><td>{{ row.category }}</td><td><span class="badge bg-secondary">{{ row.count }}</span></td></tr>
-                            {% empty %}<tr><td colspan="2" class="text-muted text-center py-3">No data</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Category</th><th class="text-center">Count</th></tr></thead>
+                    <tbody>
+                        {% for row in category_summary %}
+                        <tr><td>{{ row.category }}</td><td class="text-center"><span class="badge bg-secondary">{{ row.count }}</span></td></tr>
+                        {% empty %}<tr><td colspan="2" class="text-muted text-center py-3">No data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+        </div>
+
+        {% if total_waste %}
+        <div class="card">
+            <div class="card-body text-center">
+                <div class="text-muted small mb-1">Waste (period)</div>
+                <div class="fw-bold text-warning fs-5">{{ total_waste|floatformat:3 }}</div>
+                <div class="text-muted" style="font-size:0.78rem;">units wasted</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Consumption Breakdown -->
+{% if consumption %}
+<div class="card mb-4">
+    <div class="card-header py-3"><i class="bi bi-box-arrow-up me-2" style="color:var(--gold);"></i>Materials Consumed in Period</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light"><tr><th>Material</th><th>Category</th><th class="text-end">Total Consumed</th><th>Unit</th></tr></thead>
+                <tbody>
+                    {% for row in consumption %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.material__name }}</td>
+                        <td class="text-muted">{{ row.material__category__name }}</td>
+                        <td class="text-end fw-semibold">{{ row.total_consumed|floatformat:3 }}</td>
+                        <td class="text-muted">{{ row.material__unit_of_measure }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+{% endif %}
+
+<!-- Supplier Summary -->
+{% if supplier_summary %}
+<div class="card">
+    <div class="card-header py-3"><i class="bi bi-truck me-2" style="color:var(--gold);"></i>Supplier Activity (Period)</div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 small">
+                <thead class="table-light"><tr><th>Supplier</th><th class="text-center">Entries</th><th class="text-end">Total Value (฿)</th></tr></thead>
+                <tbody>
+                    {% for row in supplier_summary %}
+                    <tr>
+                        <td class="fw-semibold">{{ row.supplier__name }}</td>
+                        <td class="text-center">{{ row.total_entries }}</td>
+                        <td class="text-end">{{ row.total_value|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
