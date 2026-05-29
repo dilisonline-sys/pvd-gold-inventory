@@ -4,38 +4,130 @@
 {% block page_title %}Gold Consumption Report{% endblock %}
 
 {% block content %}
-<div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card"><div class="card-body"><div class="stat-value" style="color:#c9a84c;">{{ totals.total_received|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Gold Received (g)</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#198754;"><div class="card-body"><div class="stat-value text-success">{{ totals.total_issued|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Issued (g)</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#ffc107;"><div class="card-body"><div class="stat-value text-warning">{{ totals.total_waste|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Waste (g)</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#dc3545;"><div class="card-body"><div class="stat-value text-danger">{{ totals.loss_pct|default:"0"|floatformat:1 }}%</div><div class="stat-label">Overall Loss %</div></div></div></div>
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-3"><label class="form-label small fw-semibold">From Date</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-3"><label class="form-label small fw-semibold">To Date</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-auto"><button type="submit" class="btn btn-gold btn-sm"><i class="bi bi-funnel me-1"></i>Apply</button></div>
+            <div class="col-auto"><a href="{% url 'reports:gold_consumption_report' %}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+        </form>
+    </div>
 </div>
 
-<div class="card">
-    <div class="card-header">Gold Usage per Production Job</div>
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(201,168,76,0.15);"><i class="bi bi-box-arrow-in-down fs-4" style="color:var(--gold);"></i></div>
+            <div><div class="stat-value" style="color:var(--gold-dark);">{{ totals.total_received|floatformat:3 }}</div><div class="stat-label">Gold Received (g)</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#198754;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(25,135,84,0.12);"><i class="bi bi-box-arrow-up-right fs-4 text-success"></i></div>
+            <div><div class="stat-value text-success">{{ totals.total_issued|floatformat:3 }}</div><div class="stat-label">Issued to Production (g)</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#ffc107;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(255,193,7,0.15);"><i class="bi bi-recycle fs-4 text-warning"></i></div>
+            <div><div class="stat-value text-warning">{{ totals.total_waste|floatformat:3 }}</div><div class="stat-label">Total Waste (g)</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#dc3545;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(220,53,69,0.1);"><i class="bi bi-percent fs-4 text-danger"></i></div>
+            <div><div class="stat-value text-danger">{{ totals.loss_pct|floatformat:1 }}%</div><div class="stat-label">Overall Loss %</div></div>
+        </div></div>
+    </div>
+</div>
+
+<!-- Per-purity issued breakdown -->
+{% if gold_purity_issued %}
+<div class="card mb-4">
+    <div class="card-header py-3"><i class="bi bi-gem me-2" style="color:var(--gold);"></i>Issued by Metal Type &amp; Purity</div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light"><tr><th>Material</th><th>Purity</th><th class="text-end">Total Issued (g)</th></tr></thead>
+            <tbody>
+                {% for row in gold_purity_issued %}
+                <tr>
+                    <td class="fw-semibold">{{ row.material__name }}</td>
+                    <td>{% if row.material__metal_purity %}<span class="badge bg-light text-dark border">{{ row.material__metal_purity }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+                    <td class="text-end fw-semibold">{{ row.total|floatformat:3 }} {{ row.material__unit_of_measure }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- Per-job weight tracking -->
+<div class="card mb-4">
+    <div class="card-header py-3"><i class="bi bi-table me-2" style="color:var(--gold);"></i>Weight Tracking per Production Job</div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table class="table table-hover align-middle mb-0 small">
                 <thead class="table-light">
-                    <tr><th>Job #</th><th>Title</th><th>Stage</th><th>Weight In (g)</th><th>Weight Out (g)</th><th>Waste (g)</th><th>Loss %</th></tr>
+                    <tr><th>Job #</th><th>Title</th><th class="text-end">Wt In (g)</th><th class="text-end">Wt Out (g)</th><th class="text-end">Waste (g)</th><th class="text-end">Loss %</th></tr>
                 </thead>
                 <tbody>
                     {% for row in job_data %}
                     <tr>
-                        <td class="fw-semibold"><a href="{% url 'manufacturing:job_detail' row.job_pk %}">{{ row.job_number }}</a></td>
-                        <td class="small">{{ row.title|truncatechars:30 }}</td>
-                        <td class="small text-muted">{{ row.stage }}</td>
-                        <td>{{ row.weight_in|default:"—"|floatformat:2 }}</td>
-                        <td>{{ row.weight_out|default:"—"|floatformat:2 }}</td>
-                        <td>{{ row.waste|default:"—"|floatformat:2 }}</td>
-                        <td>{% if row.loss_pct %}<span class="{% if row.loss_pct > 5 %}text-danger fw-bold{% endif %}">{{ row.loss_pct|floatformat:1 }}%</span>{% else %}&mdash;{% endif %}</td>
+                        <td class="fw-semibold"><a href="{% url 'manufacturing:job_detail' row.job_pk %}" class="text-decoration-none" style="color:var(--gold-dark);">{{ row.job_number }}</a></td>
+                        <td class="text-muted">{{ row.title|default:"—"|truncatechars:30 }}</td>
+                        <td class="text-end">{{ row.weight_in|floatformat:3 }}</td>
+                        <td class="text-end">{{ row.weight_out|floatformat:3 }}</td>
+                        <td class="text-end text-warning">{{ row.waste|floatformat:3 }}</td>
+                        <td class="text-end">
+                            {% if row.loss_pct %}
+                            <span class="{% if row.loss_pct > 5 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ row.loss_pct|floatformat:1 }}%</span>
+                            {% else %}—{% endif %}
+                        </td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="text-center text-muted py-5"><i class="bi bi-gem fs-2 d-block mb-2"></i>No gold consumption data yet.</td></tr>
+                    <tr><td colspan="6" class="text-center text-muted py-5"><i class="bi bi-gem fs-2 d-block mb-2"></i>No weight data recorded in this period.</td></tr>
                     {% endfor %}
                 </tbody>
+                {% if job_data %}
+                <tfoot class="table-light fw-semibold">
+                    <tr>
+                        <td colspan="2">Totals</td>
+                        <td class="text-end">{{ total_weight_in|floatformat:3 }}</td>
+                        <td class="text-end">{{ total_weight_out|floatformat:3 }}</td>
+                        <td class="text-end text-warning">{{ totals.total_waste|floatformat:3 }}</td>
+                        <td class="text-end text-danger">{{ totals.loss_pct|floatformat:1 }}%</td>
+                    </tr>
+                </tfoot>
+                {% endif %}
             </table>
         </div>
     </div>
 </div>
+
+<!-- Stage-level breakdown -->
+{% if stage_weight_rows %}
+<div class="card">
+    <div class="card-header py-3"><i class="bi bi-bar-chart-steps me-2" style="color:var(--gold);"></i>Weight Loss by Stage</div>
+    <div class="card-body p-0">
+        <table class="table table-hover align-middle mb-0 small">
+            <thead class="table-light"><tr><th>Stage</th><th class="text-end">Wt In (g)</th><th class="text-end">Wt Out (g)</th><th class="text-end">Waste (g)</th><th class="text-end">Loss %</th></tr></thead>
+            <tbody>
+                {% for row in stage_weight_rows %}
+                <tr>
+                    <td class="fw-semibold">{{ row.stage }}</td>
+                    <td class="text-end">{{ row.weight_in|floatformat:3 }}</td>
+                    <td class="text-end">{{ row.weight_out|floatformat:3 }}</td>
+                    <td class="text-end text-warning">{{ row.waste|floatformat:3 }}</td>
+                    <td class="text-end {% if row.loss_pct > 5 %}text-danger fw-bold{% else %}text-muted{% endif %}">{{ row.loss_pct|floatformat:1 }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

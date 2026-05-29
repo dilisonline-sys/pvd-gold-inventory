@@ -4,67 +4,152 @@
 {% block page_title %}Order Report{% endblock %}
 
 {% block content %}
+<!-- Date Range Filter -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-sm-3"><label class="form-label small fw-semibold">From Date</label><input type="date" name="date_from" value="{{ date_from|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-sm-3"><label class="form-label small fw-semibold">To Date</label><input type="date" name="date_to" value="{{ date_to|date:'Y-m-d' }}" class="form-control form-control-sm"></div>
+            <div class="col-auto"><button type="submit" class="btn btn-gold btn-sm"><i class="bi bi-funnel me-1"></i>Apply</button></div>
+            <div class="col-auto"><a href="{% url 'reports:order_report' %}" class="btn btn-outline-secondary btn-sm">Reset</a></div>
+        </form>
+    </div>
+</div>
+
+<!-- Stat Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card"><div class="card-body"><div class="stat-value">{{ total_orders|default:"0" }}</div><div class="stat-label">Total Orders</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#198754;"><div class="card-body"><div class="stat-value text-success">{{ delivered_orders|default:"0" }}</div><div class="stat-label">Delivered</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#c9a84c;"><div class="card-body"><div class="stat-value" style="color:#c9a84c;">{{ total_revenue|default:"0"|floatformat:2 }}</div><div class="stat-label">Total Revenue</div></div></div></div>
-    <div class="col-sm-6 col-xl-3"><div class="card stat-card" style="border-left-color:#0dcaf0;"><div class="card-body"><div class="stat-value text-info">{{ on_time_rate|default:"0" }}%</div><div class="stat-label">On-Time Delivery Rate</div></div></div></div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(201,168,76,0.15);"><i class="bi bi-clipboard-check fs-4" style="color:var(--gold);"></i></div>
+            <div><div class="stat-value">{{ total_orders }}</div><div class="stat-label">Total Orders</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#198754;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(25,135,84,0.12);"><i class="bi bi-truck fs-4 text-success"></i></div>
+            <div><div class="stat-value text-success">{{ delivered_orders }}</div><div class="stat-label">Delivered</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#c9a84c;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(201,168,76,0.15);"><i class="bi bi-currency-exchange fs-4" style="color:var(--gold);"></i></div>
+            <div><div class="stat-value" style="color:var(--gold-dark);">฿{{ total_revenue|floatformat:0 }}</div><div class="stat-label">Revenue</div></div>
+        </div></div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card stat-card h-100" style="border-left-color:#0dcaf0;"><div class="card-body d-flex align-items-center gap-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:48px;height:48px;background:rgba(13,202,240,0.12);"><i class="bi bi-clock-history fs-4 text-info"></i></div>
+            <div><div class="stat-value text-info">{{ on_time_rate }}%</div><div class="stat-label">On-Time Delivery</div></div>
+        </div></div>
+    </div>
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Orders by Status</div>
+    <!-- Status Breakdown -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header py-3"><i class="bi bi-bar-chart me-2" style="color:var(--gold);"></i>Orders by Status</div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead class="table-light"><tr><th>Status</th><th>Count</th><th>Revenue</th></tr></thead>
-                        <tbody>
-                            {% for row in status_counts %}
-                            <tr><td>{{ row.status }}</td><td>{{ row.count }}</td><td>{{ row.revenue|default:"—"|floatformat:2 }}</td></tr>
-                            {% empty %}<tr><td colspan="3" class="text-center text-muted py-3">No data</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Status</th><th class="text-center">Count</th><th class="text-end">Revenue (฿)</th></tr></thead>
+                    <tbody>
+                        {% for row in status_counts %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.status }}</td>
+                            <td class="text-center"><span class="badge bg-secondary">{{ row.count }}</span></td>
+                            <td class="text-end text-muted">{{ row.revenue|floatformat:0|default:"—" }}</td>
+                        </tr>
+                        {% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Top Customers</div>
+
+    <!-- Top Customers -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header py-3"><i class="bi bi-people me-2" style="color:var(--gold);"></i>Top Customers</div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead class="table-light"><tr><th>Customer</th><th>Orders</th><th>Revenue</th></tr></thead>
-                        <tbody>
-                            {% for row in top_customers %}
-                            <tr><td class="fw-semibold">{{ row.customer__name }}</td><td>{{ row.total_orders }}</td><td>{{ row.total_revenue|default:"—"|floatformat:2 }}</td></tr>
-                            {% empty %}<tr><td colspan="3" class="text-center text-muted py-3">No data</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Customer</th><th class="text-center">Orders</th><th class="text-end">Revenue (฿)</th></tr></thead>
+                    <tbody>
+                        {% for row in top_customers %}
+                        <tr>
+                            <td class="fw-semibold">{{ row.customer__name }}</td>
+                            <td class="text-center">{{ row.total_orders }}</td>
+                            <td class="text-end text-muted">{{ row.total_revenue|floatformat:0|default:"—" }}</td>
+                        </tr>
+                        {% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    <div class="col-lg-6">
-        <div class="card">
-            <div class="card-header">Orders by Metal Type</div>
+
+    <!-- Metal Type + Purity -->
+    <div class="col-lg-4">
+        <div class="card h-100">
+            <div class="card-header py-3"><i class="bi bi-gem me-2" style="color:var(--gold);"></i>Orders by Metal &amp; Purity</div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead class="table-light"><tr><th>Metal</th><th>Purity</th><th>Count</th></tr></thead>
-                        <tbody>
-                            {% for row in metal_type_counts %}
-                            <tr><td>{{ row.metal_type }}</td><td>{{ row.metal_purity }}</td><td>{{ row.count }}</td></tr>
-                            {% empty %}<tr><td colspan="3" class="text-center text-muted py-3">No data</td></tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+                <table class="table align-middle mb-0 small">
+                    <thead class="table-light"><tr><th>Metal</th><th>Purity</th><th class="text-center">Orders</th></tr></thead>
+                    <tbody>
+                        {% for row in metal_type_counts %}
+                        <tr>
+                            <td><span class="badge bg-secondary">{{ row.metal_type }}</span></td>
+                            <td>{{ row.metal_purity_display }}</td>
+                            <td class="text-center fw-semibold">{{ row.count }}</td>
+                        </tr>
+                        {% empty %}<tr><td colspan="3" class="text-muted text-center py-3">No data</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 </div>
+
+<!-- Financials summary -->
+{% if total_orders %}
+<div class="card mt-4">
+    <div class="card-header py-3"><i class="bi bi-cash-stack me-2" style="color:var(--gold);"></i>Financial Summary</div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-sm-6 col-md-3 text-center">
+                <div class="text-muted small">Estimated Revenue</div>
+                <div class="fw-bold fs-5">฿{{ total_estimated|floatformat:2 }}</div>
+            </div>
+            <div class="col-sm-6 col-md-3 text-center">
+                <div class="text-muted small">Actual Revenue</div>
+                <div class="fw-bold fs-5 text-success">฿{{ total_actual|floatformat:2 }}</div>
+            </div>
+            <div class="col-sm-6 col-md-3 text-center">
+                <div class="text-muted small">Advance Received</div>
+                <div class="fw-bold fs-5 text-primary">฿{{ total_advance|floatformat:2 }}</div>
+            </div>
+            <div class="col-sm-6 col-md-3 text-center">
+                <div class="text-muted small">Balance Due</div>
+                <div class="fw-bold fs-5 text-danger">฿{{ total_balance_due|floatformat:2 }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Delivery Performance -->
+{% if total_delivered %}
+<div class="card mt-4">
+    <div class="card-header py-3"><i class="bi bi-truck me-2" style="color:var(--gold);"></i>Delivery Performance</div>
+    <div class="card-body">
+        <div class="row g-3 text-center">
+            <div class="col-4"><div class="text-muted small">Delivered</div><div class="fw-bold fs-5">{{ total_delivered }}</div></div>
+            <div class="col-4"><div class="text-muted small">On Time</div><div class="fw-bold fs-5 text-success">{{ on_time_deliveries }}</div></div>
+            <div class="col-4"><div class="text-muted small">Late</div><div class="fw-bold fs-5 text-danger">{{ late_deliveries }}</div></div>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}
