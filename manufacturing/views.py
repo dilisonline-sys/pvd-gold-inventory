@@ -274,11 +274,18 @@ def job_detail(request, pk):
     stage_record_map = {r.stage_id: r for r in process_records}
     timeline = []
     for stage in all_stages:
+        record = stage_record_map.get(stage.pk)
+        is_current = stage.pk == job.current_stage_id
+        # Use actual record status; fall back to order-number for stages with no record
+        if record is not None:
+            is_completed = record.status in ('COMPLETED', 'SKIPPED')
+        else:
+            is_completed = (not is_current) and stage.order_number < job.current_stage.order_number
         timeline.append({
             'stage': stage,
-            'record': stage_record_map.get(stage.pk),
-            'is_current': stage.pk == job.current_stage_id,
-            'is_completed': stage.order_number < job.current_stage.order_number,
+            'record': record,
+            'is_current': is_current,
+            'is_completed': is_completed,
             'is_future': stage.order_number > job.current_stage.order_number,
         })
 
@@ -334,6 +341,27 @@ def job_edit(request, pk):
         'manufacturing/job_form.html',
         {'form': form, 'action': 'Edit', 'job': job},
     )
+
+
+# ---------------------------------------------------------------------------
+# Job Delete (admin only)
+# ---------------------------------------------------------------------------
+
+@login_required
+def job_delete(request, pk):
+    """Permanently delete a production job. Admin only."""
+    if request.user.role != ROLE_ADMIN:
+        return HttpResponseForbidden('<h1>403 Forbidden</h1><p>Admin access required.</p>')
+
+    job = get_object_or_404(ProductionJob, pk=pk)
+
+    if request.method == 'POST':
+        job_number = job.job_number
+        job.delete()
+        messages.success(request, f'Production job {job_number} has been permanently deleted.')
+        return redirect('manufacturing:job_list')
+
+    return render(request, 'manufacturing/job_confirm_delete.html', {'job': job})
 
 
 # ---------------------------------------------------------------------------

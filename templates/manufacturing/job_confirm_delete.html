@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Delete Job {{ job.job_number }}{% endblock %}
+{% block nav_production %}active{% endblock %}
+{% block page_title %}Delete Production Job{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+<div class="col-lg-6">
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white py-3">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        Confirm Permanent Deletion
+    </div>
+    <div class="card-body">
+        <p class="mb-3">You are about to permanently delete the following production job and <strong>all associated data</strong>:</p>
+
+        <div class="alert alert-light border mb-4">
+            <div class="row g-2 small">
+                <div class="col-6">
+                    <div class="text-muted">Job Number</div>
+                    <div class="fw-bold fs-6" style="color:var(--gold-dark);">{{ job.job_number }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Title</div>
+                    <div class="fw-semibold">{{ job.title }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Current Stage</div>
+                    <div>{{ job.current_stage.name }}</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Status</div>
+                    <div>{{ job.get_status_display }}</div>
+                </div>
+                {% if job.job_order %}
+                <div class="col-12">
+                    <div class="text-muted">Linked Order</div>
+                    <div>{{ job.job_order.order_number }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="alert alert-danger mb-4">
+            <strong>This will also permanently delete:</strong>
+            <ul class="mb-0 mt-1 small">
+                <li>All process stage records and dates</li>
+                <li>All quality control checks</li>
+                <li>All material issuances for this job</li>
+                {% if job.final_product %}<li>The linked final product / catalog entry</li>{% endif %}
+            </ul>
+            <div class="mt-2 fw-semibold">This action cannot be undone.</div>
+        </div>
+
+        <form method="post" class="d-flex gap-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash me-1"></i> Yes, Delete Permanently
+            </button>
+            <a href="{% url 'manufacturing:job_detail' job.pk %}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </form>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}
